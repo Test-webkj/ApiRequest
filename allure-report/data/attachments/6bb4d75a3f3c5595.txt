@@ -1,0 +1,11 @@
+没有渲染前的字典值数据 {'操作类型': '发送请求POST', '请求地址': '{{URL}}', 'URL参数': {'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}, '请求数据': {'accounts': '{{uname}}', 'pwd': '{{pwd}}', 'type': 'username'}}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '登录成功', '描述标题': '错误用户名和密码', 'uname': 'test_users_001', 'pwd': 1234567, 'expected': '登录帐号不存在'}
+渲染后的字典值数据 {'操作类型': '发送请求POST', '请求地址': 'http://shop-xo.hctestedu.com', 'URL参数': {'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}, '请求数据': {'accounts': 'test_users_001', 'pwd': '1234567', 'type': 'username'}}
+登陆响应数据 {'msg': '登录帐号不存在', 'code': -3, 'data': ''}
+没有渲染前的字典值数据 {'操作类型': '提取数据JSON', '表达式': '$..msg', '变量名': 'sj_msg'}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '登录成功', '描述标题': '错误用户名和密码', 'uname': 'test_users_001', 'pwd': 1234567, 'expected': '登录帐号不存在'}
+渲染后的字典值数据 {'操作类型': '提取数据JSON', '表达式': '$..msg', '变量名': 'sj_msg'}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '登录帐号不存在'}
+没有渲染前的字典值数据 {'操作类型': '断言文本', '期望结果': '{{expected}}', '实际结果': '{{sj_msg}}', '比较符': '=='}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '登录帐号不存在', '描述标题': '错误用户名和密码', 'uname': 'test_users_001', 'pwd': 1234567, 'expected': '登录帐号不存在'}
+渲染后的字典值数据 {'操作类型': '断言文本', '期望结果': '登录帐号不存在', '实际结果': '登录帐号不存在', '比较符': '=='}

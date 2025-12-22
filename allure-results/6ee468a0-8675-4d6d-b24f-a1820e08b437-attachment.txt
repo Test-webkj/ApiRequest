@@ -1,0 +1,24 @@
+没有渲染前的字典值数据 {'操作类型': '发送请求POST', '请求地址': '{{URL}}', 'URL参数': {'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}, '请求数据': {'accounts': 'test_user_001', 'pwd': 'Test@123456', 'type': 'username'}}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '密码错误'}
+渲染后的字典值数据 {'操作类型': '发送请求POST', '请求地址': 'http://shop-xo.hctestedu.com', 'URL参数': {'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}, '请求数据': {'accounts': 'test_user_001', 'pwd': 'Test@123456', 'type': 'username'}}
+登陆响应数据 {'msg': '登录成功', 'code': 0, 'data': {'id': '12086', 'username': 'test_user_001', 'nickname': '', 'mobile': '', 'email': '', 'avatar': 'http://shop-xo.hctestedu.com/static/index/default/images/default-user-avatar.jpg', 'alipay_openid': '', 'weixin_openid': '', 'weixin_unionid': '', 'weixin_web_openid': '', 'baidu_openid': '', 'toutiao_openid': '', 'qq_openid': '', 'qq_unionid': '', 'integral': '0', 'locking_integral': '0', 'referrer': '0', 'add_time': '1763708668', 'add_time_text': '2025-11-21 15:04:28', 'mobile_security': '', 'email_security': '', 'user_name_view': 'test_user_001', 'is_mandatory_bind_mobile': 0, 'token': '3165d512122d625945898c69b3a4d19f'}}
+没有渲染前的字典值数据 {'操作类型': '提取数据JSON', '表达式': '$..token', '变量名': 'msg_token'}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '密码错误'}
+渲染后的字典值数据 {'操作类型': '提取数据JSON', '表达式': '$..token', '变量名': 'msg_token'}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '密码错误', 'msg_token': '3165d512122d625945898c69b3a4d19f'}
+没有渲染前的字典值数据 {'操作类型': '提取数据JSON', '表达式': '$..msg', '变量名': 'sj_msg'}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '密码错误', 'msg_token': '3165d512122d625945898c69b3a4d19f'}
+渲染后的字典值数据 {'操作类型': '提取数据JSON', '表达式': '$..msg', '变量名': 'sj_msg'}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '登录成功', 'msg_token': '3165d512122d625945898c69b3a4d19f'}
+没有渲染前的字典值数据 {'操作类型': '断言文本', '期望结果': '登录成功', '实际结果': '{{sj_msg}}', '比较符': '=='}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '登录成功', 'msg_token': '3165d512122d625945898c69b3a4d19f'}
+渲染后的字典值数据 {'操作类型': '断言文本', '期望结果': '登录成功', '实际结果': '登录成功', '比较符': '=='}
+没有渲染前的字典值数据 {'操作类型': '断言文本相等', '期望结果': '登录成功', '实际结果': '{{sj_msg}}'}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '登录成功', 'msg_token': '3165d512122d625945898c69b3a4d19f'}
+渲染后的字典值数据 {'操作类型': '断言文本相等', '期望结果': '登录成功', '实际结果': '登录成功'}
+没有渲染前的字典值数据 {'操作类型': '断言文本包含', '期望结果': '登录成功', '实际结果': '{{sj_msg}}'}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '登录成功', 'msg_token': '3165d512122d625945898c69b3a4d19f'}
+渲染后的字典值数据 {'操作类型': '断言文本包含', '期望结果': '登录成功', '实际结果': '登录成功'}
+没有渲染前的字典值数据 {'操作类型': '批量断言', '期望结果': {'msg': '登录成功', 'code': 0, 'data': {'id': '12086', 'username': 'test_user_001', 'nickname': '', 'mobile': '', 'email': '', 'avatar': 'http://shop-xo.hctestedu.com/static/index/default/images/default-user-avatar.jpg', 'alipay_openid': '', 'weixin_openid': '', 'weixin_unionid': '', 'weixin_web_openid': '', 'baidu_openid': '', 'toutiao_openid': '', 'qq_openid': '', 'qq_unionid': '', 'integral': '0', 'locking_integral': '0', 'referrer': '0', 'add_time': '1763708668', 'add_time_text': '2025-11-21 15:04:28', 'mobile_security': '', 'email_security': '', 'user_name_view': 'test_user_001', 'is_mandatory_bind_mobile': 0, 'token': '2b8e9d93c8cf77ac6b9c7f6d7c587cbc'}}, '过滤字段': ["root['data']['token']"]}
+全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'sj_msg': '登录成功', 'msg_token': '3165d512122d625945898c69b3a4d19f'}
+渲染后的字典值数据 {'操作类型': '批量断言', '期望结果': {'msg': '登录成功', 'code': 0, 'data': {'id': '12086', 'username': 'test_user_001', 'nickname': '', 'mobile': '', 'email': '', 'avatar': 'http://shop-xo.hctestedu.com/static/index/default/images/default-user-avatar.jpg', 'alipay_openid': '', 'weixin_openid': '', 'weixin_unionid': '', 'weixin_web_openid': '', 'baidu_openid': '', 'toutiao_openid': '', 'qq_openid': '', 'qq_unionid': '', 'integral': '0', 'locking_integral': '0', 'referrer': '0', 'add_time': '1763708668', 'add_time_text': '2025-11-21 15:04:28', 'mobile_security': '', 'email_security': '', 'user_name_view': 'test_user_001', 'is_mandatory_bind_mobile': 0, 'token': '2b8e9d93c8cf77ac6b9c7f6d7c587cbc'}}, '过滤字段': ["root['data']['token']"]}

@@ -1,0 +1,1160 @@
+Index: HAT/keywords/api_keywords.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import allure\r\nimport jsonpath\r\n\r\nfrom HAT.core.globalContext import g_context\r\n\r\n\r\nclass Keywords:\r\n\r\n    def __init__(self,request):\r\n        self.request=request\r\n\r\n    @allure.step(\"发送请求POST\")\r\n    def 发送请求POST(self,**kwargs):\r\n        url=kwargs.get('请求地址',None)\r\n        params=kwargs.get('URL参数',None)\r\n        headers=kwargs.get('请求头',None)\r\n        data=kwargs.get('请求数据',None)\r\n        files=kwargs.get('文件列表',[])\r\n        data_type=kwargs.get('请求类型',\"data\").lower()#默认请求类型\r\n        request_data={\r\n            \"url\":url,\r\n            \"params\":params,\r\n            \"headers\":headers,\r\n            \"files\":files,\r\n        }\r\n        # 如果json   request_data['json']= data\r\n        if data_type==\"json\":\r\n            request_data[\"json\"]=data\r\n        elif data_type==\"data\":  #request_data['json']= data\r\n            request_data[\"data\"]=data\r\n        else:\r\n            raise Exception(\"请求类型错误\")\r\n        try:\r\n            # self.request  必须是什么值才能发请求？  requests.request()\r\n            response=self.request.request(\"post\",**request_data)\r\n            print(\"登陆响应数据\",response.json())\r\n            g_context().set_dict(\"响应结果\",response)\r\n            # 保存数据的逻辑  xxx\r\n        except Exception as e:\r\n            print(\"请求错误\",e)\r\n        return response\r\n\r\n    @allure.step(\"发送请求GET\")\r\n    def 发送请求GET(self,**kwargs):\r\n        url = kwargs.get('请求地址', None)\r\n        params = kwargs.get('URL参数', None)\r\n        headers = kwargs.get('请求头', None)\r\n        data = kwargs.get('请求数据', None)\r\n        files = kwargs.get('文件列表', [])\r\n        request_data = {\r\n            \"url\": url,\r\n            \"params\": params,\r\n            \"headers\": headers,\r\n            \"files\": files,\r\n        }\r\n        response = self.request.request(\"get\", **request_data)\r\n        return response\r\n\r\n    @allure.step(\"提取数据JSON\")\r\n    def 提取数据JSON(self,**kwargs):\r\n        # 获取jsonpath表达式  $..msg  $..token\r\n        EXPRESSION=kwargs.get(\"表达式\",None)\r\n        # 获取下标 不填下标就给你0  默认取第一个数据\r\n        INDEX=kwargs.get(\"下标\",None)\r\n        if INDEX is None:\r\n            INDEX=0\r\n\r\n        response=g_context().get_dict(\"响应结果\").json()\r\n        result=jsonpath.jsonpath(response,EXPRESSION)\r\n        if not result:\r\n            raise Exception(f\"没有找到对应的数据:{EXPRESSION}\")\r\n        ex_data=result[INDEX]\r\n        # 设置到全局变量中去  {\"msg_token\": '1a8080e503afb6a24e23396aa654cccb'}\r\n        g_context().set_dict(kwargs[\"变量名\"],ex_data)\r\n        print(\"全局变量\",g_context().show_dict())
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/HAT/keywords/api_keywords.py b/HAT/keywords/api_keywords.py
+--- a/HAT/keywords/api_keywords.py	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/HAT/keywords/api_keywords.py	(date 1765874127557)
+@@ -33,7 +33,7 @@
+         try:
+             # self.request  必须是什么值才能发请求？  requests.request()
+             response=self.request.request("post",**request_data)
+-            print("登陆响应数据",response.json())
++            print("请求响应数据",response.json())
+             g_context().set_dict("响应结果",response)
+             # 保存数据的逻辑  xxx
+         except Exception as e:
+@@ -47,13 +47,28 @@
+         headers = kwargs.get('请求头', None)
+         data = kwargs.get('请求数据', None)
+         files = kwargs.get('文件列表', [])
++        data_type = kwargs.get('请求类型', "data").lower()  # 默认请求类型
+         request_data = {
+             "url": url,
+             "params": params,
+             "headers": headers,
+             "files": files,
+         }
+-        response = self.request.request("get", **request_data)
++        # 如果json   request_data['json']= data
++        if data_type=="json":
++            request_data["json"]=data
++        elif data_type=="data":  #request_data['json']= data
++            request_data["data"]=data
++        else:
++            raise Exception("请求类型错误")
++        try:
++            # self.request  必须是什么值才能发请求？  requests.request()
++            response=self.request.request("post",**request_data)
++            print("请求响应数据",response.json())
++            g_context().set_dict("响应结果",response)
++            # 保存数据的逻辑  xxx
++        except Exception as e:
++            print("请求错误",e)
+         return response
+ 
+     @allure.step("提取数据JSON")
+Index: HAT/core/TestRunner.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import copy\r\nimport sys\r\n\r\nimport allure\r\nimport pytest\r\nimport requests\r\nfrom tqdm import tqdm\r\n\r\nfrom HAT.extend.script import run_script\r\nfrom HAT.core.globalContext import g_context\r\nfrom HAT.parse.YamlCaseParser import load_context_from_yaml, readYaml, load_yaml_files\r\nfrom HAT.keywords.api_keywords import Keywords\r\nfrom HAT.utils.VarRender import refresh\r\n\r\n\r\nclass TestRunner:\r\n    # 用例数据\r\n    # load_context_from_yaml(r'F:\\request\\examples\\api-cases-yaml') #把地址放在全局变量中去了\r\n    # data=readYaml(r'F:\\request\\examples\\api-cases-yaml\\1_login.yaml')\r\n    data = load_yaml_files(r'./examples/api-cases-yaml/')\r\n\r\n    @pytest.mark.parametrize(\"caseinfo\", data)  # 列表数据\r\n    def test_case_execute(self, caseinfo):\r\n        keywords = Keywords(requests)\r\n        base_info = caseinfo.get('基础配置', {})  # 测试报告后续用的\r\n        print(\"数据类型\",type(base_info))\r\n        allure.dynamic.parameter(\"caseinfo\", \"\")\r\n        allure.dynamic.feature(base_info.get(\"一级模块\", \"默认模块\"))\r\n        allure.dynamic.story(base_info.get(\"二级模块\", \"默认模块\"))\r\n        allure.dynamic.title(base_info.get(\"用例标题\", '默认用例标题'))\r\n\r\n        local_context = caseinfo.get(\"local_context\", {})\r\n        context = copy.deepcopy(g_context().show_dict())\r\n        context.update(local_context)\r\n\r\n        #读取前置脚本的数据\r\n        pre_script = refresh(caseinfo.get(\"前置脚本\", None), context)\r\n        if pre_script:  # 前置脚本不为空  \"context.update({'uname':'test_user_001'})\"\r\n            for script in eval(pre_script):  # 循环前置脚本的数据\r\n                # 放在全局变量(script--g_context().show_dict())\r\n                run_script.exec_script(script, g_context().show_dict())  # 只是把前置脚本的数据放在全局变量中\r\n\r\n        steps = caseinfo.get('用例步骤', None)\r\n\r\n        with tqdm(total=len(steps), desc=\"开始执行\") as pbar:\r\n            for step in steps:  # [{'发送登录接口'：{'操作类型': '发送请求POST', '请求地}}]\r\n                step_name = list(step.keys())[0]  # '发送登录接口'\r\n                step_value = list(step.values())[0]  # {'操作类型': '发送请求POST', '请求地址': 'httpxx\r\n                pbar.set_description(f'{base_info.get(\"用例标题\")}-当前步骤:{step_name}')\r\n                pbar.update(1)\r\n                with allure.step(step_name):\r\n                    # print(\"没有渲染前的字典值数据\", step_value)\r\n                    context = copy.deepcopy(g_context().show_dict())  # 全局变量\r\n                    step_value = eval(refresh(step_value, context))\r\n\r\n                    # print(\"渲染后的字典值数据\", step_value)\r\n                    key = step_value['操作类型']  # 发送请求POST  发送请求GET\r\n                    print(\"操作类型\",key)\r\n                    try:\r\n                        key_func = keywords.__getattribute__(key)  # 去Keywords关键字类中找对应的方法  反射\r\n\r\n                    except Exception as e:\r\n                        # print(\"在keywords类中没有找到对应的方法\")\r\n                        sys.path.append('./HAT/key_dir')  # 找目录文件\r\n                        module = __import__(key)  # 导入模块 import 发送请求 POST\r\n                        class_ = getattr(module, key)  # 获取模块中的方法\r\n                        key_func = class_(requests).__getattribute__(key)\r\n                    key_func(**step_value)  # 发送请求POST(接口信息)\r\n\r\n\r\n        local_context = caseinfo.get(\"local_context\", {})\r\n        context = copy.deepcopy(g_context().show_dict())\r\n        context.update(local_context)\r\n\r\n        #读取后置脚本的数据\r\n        pre_script = refresh(caseinfo.get('后置脚本', None), context)\r\n        if pre_script:\r\n            for script in eval(pre_script):\r\n                run_script.exec_script(script, g_context().show_dict())
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/HAT/core/TestRunner.py b/HAT/core/TestRunner.py
+--- a/HAT/core/TestRunner.py	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/HAT/core/TestRunner.py	(date 1765964245946)
+@@ -5,14 +5,12 @@
+ import pytest
+ import requests
+ from tqdm import tqdm
+-
+ from HAT.extend.script import run_script
+ from HAT.core.globalContext import g_context
+ from HAT.parse.YamlCaseParser import load_context_from_yaml, readYaml, load_yaml_files
+ from HAT.keywords.api_keywords import Keywords
+ from HAT.utils.VarRender import refresh
+ 
+-
+ class TestRunner:
+     # 用例数据
+     # load_context_from_yaml(r'F:\request\examples\api-cases-yaml') #把地址放在全局变量中去了
+@@ -58,6 +56,8 @@
+                     print("操作类型",key)
+                     try:
+                         key_func = keywords.__getattribute__(key)  # 去Keywords关键字类中找对应的方法  反射
++                        # assert sjmsg == '登录成功'
++                        # print("断言成功")
+ 
+                     except Exception as e:
+                         # print("在keywords类中没有找到对应的方法")
+Index: allure-report/data/attachments/51af9bc94b98b07e.txt
+===================================================================
+diff --git a/allure-report/data/attachments/51af9bc94b98b07e.txt b/allure-report/data/attachments/51af9bc94b98b07e.txt
+deleted file mode 100644
+--- a/allure-report/data/attachments/51af9bc94b98b07e.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,7 +0,0 @@
+-
+-开始执行:   0%|          | 0/3 [00:00<?, ?it/s]
+-登录用例标题-当前步骤:发送登录接口:   0%|          | 0/3 [00:00<?, ?it/s]
+-登录用例标题-当前步骤:提取响应数据token:  33%|███▎      | 1/3 [00:00<00:00,  2.06it/s]
+-登录用例标题-当前步骤:提取响应数据token:  67%|██████▋   | 2/3 [00:00<00:00,  4.13it/s]
+-登录用例标题-当前步骤:提取响应数据msg:  67%|██████▋   | 2/3 [00:00<00:00,  4.13it/s]  
+-登录用例标题-当前步骤:提取响应数据msg: 100%|██████████| 3/3 [00:00<00:00,  6.16it/s]
+Index: allure-results/8ecbe0cb-0802-47af-9c71-c246c778e71f-attachment.txt
+===================================================================
+diff --git a/allure-results/8ecbe0cb-0802-47af-9c71-c246c778e71f-attachment.txt b/allure-results/8ecbe0cb-0802-47af-9c71-c246c778e71f-attachment.txt
+deleted file mode 100644
+--- a/allure-results/8ecbe0cb-0802-47af-9c71-c246c778e71f-attachment.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,4 +0,0 @@
+-
+-开始执行:   0%|          | 0/1 [00:00<?, ?it/s]
+-购物车用例标题-当前步骤:发送购物车接口:   0%|          | 0/1 [00:00<?, ?it/s]
+-购物车用例标题-当前步骤:发送购物车接口: 100%|██████████| 1/1 [00:00<00:00,  1.18it/s]
+Index: allure-report/data/test-cases/1aaa2686e5a25035.json
+===================================================================
+diff --git a/allure-report/data/test-cases/1aaa2686e5a25035.json b/allure-report/data/test-cases/1aaa2686e5a25035.json
+deleted file mode 100644
+--- a/allure-report/data/test-cases/1aaa2686e5a25035.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,1 +0,0 @@
+-{"uid":"1aaa2686e5a25035","name":"登录用例标题","fullName":"HAT.core.TestRunner.TestRunner#test_case_execute","historyId":"08959e845036c7af9e93cd5455c53be2","time":{"start":1765813161749,"stop":1765813162243,"duration":494},"status":"passed","flaky":false,"newFailed":false,"newBroken":false,"newPassed":false,"retriesCount":0,"retriesStatusChange":false,"beforeStages":[],"testStage":{"status":"passed","steps":[{"name":"发送登录接口","time":{"start":1765813161757,"stop":1765813162241,"duration":484},"status":"passed","steps":[{"name":"发送请求POST","time":{"start":1765813161757,"stop":1765813162241,"duration":484},"status":"passed","steps":[],"attachments":[],"parameters":[{"name":"操作类型","value":"'发送请求POST'"},{"name":"请求地址","value":"'http://shop-xo.hctestedu.com'"},{"name":"URL参数","value":"{'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}"},{"name":"请求数据","value":"{'accounts': 'test_user_001', 'pwd': 'Test@123456', 'type': 'username'}"}],"shouldDisplayMessage":false,"attachmentsCount":0,"stepsCount":0,"attachmentStep":false,"hasContent":true}],"attachments":[],"parameters":[],"shouldDisplayMessage":false,"attachmentsCount":0,"stepsCount":1,"attachmentStep":false,"hasContent":true},{"name":"提取响应数据token","time":{"start":1765813162241,"stop":1765813162242,"duration":1},"status":"passed","steps":[{"name":"提取数据JSON","time":{"start":1765813162242,"stop":1765813162242,"duration":0},"status":"passed","steps":[],"attachments":[],"parameters":[{"name":"操作类型","value":"'提取数据JSON'"},{"name":"表达式","value":"'$..token'"},{"name":"变量名","value":"'msg_token'"}],"shouldDisplayMessage":false,"attachmentsCount":0,"stepsCount":0,"attachmentStep":false,"hasContent":true}],"attachments":[],"parameters":[],"shouldDisplayMessage":false,"attachmentsCount":0,"stepsCount":1,"attachmentStep":false,"hasContent":true},{"name":"提取响应数据msg","time":{"start":1765813162242,"stop":1765813162243,"duration":1},"status":"passed","steps":[{"name":"提取数据JSON","time":{"start":1765813162243,"stop":1765813162243,"duration":0},"status":"passed","steps":[],"attachments":[],"parameters":[{"name":"操作类型","value":"'提取数据JSON'"},{"name":"表达式","value":"'$..msg'"},{"name":"变量名","value":"'sj_msg'"}],"shouldDisplayMessage":false,"attachmentsCount":0,"stepsCount":0,"attachmentStep":false,"hasContent":true}],"attachments":[],"parameters":[],"shouldDisplayMessage":false,"attachmentsCount":0,"stepsCount":1,"attachmentStep":false,"hasContent":true}],"attachments":[{"uid":"7c9e1e81027f9026","name":"stdout","source":"7c9e1e81027f9026.txt","type":"text/plain","size":1108},{"uid":"51af9bc94b98b07e","name":"stderr","source":"51af9bc94b98b07e.txt","type":"text/plain","size":609}],"parameters":[],"shouldDisplayMessage":false,"attachmentsCount":2,"stepsCount":6,"attachmentStep":false,"hasContent":true},"afterStages":[],"labels":[{"name":"feature","value":"登录模块"},{"name":"story","value":"登录功能"},{"name":"parentSuite","value":"HAT.core"},{"name":"suite","value":"TestRunner"},{"name":"subSuite","value":"TestRunner"},{"name":"host","value":"DESKTOP-VUHS4PA"},{"name":"thread","value":"42280-MainThread"},{"name":"framework","value":"pytest"},{"name":"language","value":"cpython3"},{"name":"package","value":"HAT.core.TestRunner"},{"name":"resultFormat","value":"allure2"}],"parameters":[{"name":"caseinfo","value":"''"}],"links":[],"hidden":false,"retry":false,"extra":{"severity":"normal","retries":[],"categories":[],"tags":[]},"source":"1aaa2686e5a25035.json","parameterValues":["''"]}
+\ No newline at end of file
+Index: 1.py
+===================================================================
+diff --git a/1.py b/1.py
+deleted file mode 100644
+--- a/1.py	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,12 +0,0 @@
+-# test_yaml.py
+-import yaml
+-
+-yaml_path = r'F:\request\HAT\examples\api-cases-yaml\login.yaml'
+-try:
+-    with open(yaml_path, encoding='utf-8') as f:
+-        data = yaml.load(f, Loader=yaml.FullLoader)
+-    print("✅ 解析成功！")
+-    print("数据类型：", type(data))  # 必须是list
+-    print("用例数：", len(data))     # 输出1
+-except Exception as e:
+-    print("❌ 解析失败：", e)
+\ No newline at end of file
+Index: allure-results/143b3e1a-0ab2-4a27-9d5b-eb7e5185c1bc-attachment.txt
+===================================================================
+diff --git a/allure-results/143b3e1a-0ab2-4a27-9d5b-eb7e5185c1bc-attachment.txt b/allure-results/143b3e1a-0ab2-4a27-9d5b-eb7e5185c1bc-attachment.txt
+deleted file mode 100644
+--- a/allure-results/143b3e1a-0ab2-4a27-9d5b-eb7e5185c1bc-attachment.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,3 +0,0 @@
+-数据类型 <class 'dict'>
+-操作类型 发送请求POST
+-登陆响应数据 {'msg': '加入成功', 'code': 0, 'data': 1}
+Index: allure-report/data/attachments/7c9e1e81027f9026.txt
+===================================================================
+diff --git a/allure-report/data/attachments/7c9e1e81027f9026.txt b/allure-report/data/attachments/7c9e1e81027f9026.txt
+deleted file mode 100644
+--- a/allure-report/data/attachments/7c9e1e81027f9026.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,7 +0,0 @@
+-数据类型 <class 'dict'>
+-操作类型 发送请求POST
+-登陆响应数据 {'msg': '登录成功', 'code': 0, 'data': {'id': '12086', 'username': 'test_user_001', 'nickname': '', 'mobile': '', 'email': '', 'avatar': 'http://shop-xo.hctestedu.com/static/index/default/images/default-user-avatar.jpg', 'alipay_openid': '', 'weixin_openid': '', 'weixin_unionid': '', 'weixin_web_openid': '', 'baidu_openid': '', 'toutiao_openid': '', 'qq_openid': '', 'qq_unionid': '', 'integral': '0', 'locking_integral': '0', 'referrer': '0', 'add_time': '1763708668', 'add_time_text': '2025-11-21 15:04:28', 'mobile_security': '', 'email_security': '', 'user_name_view': 'test_user_001', 'is_mandatory_bind_mobile': 0, 'token': '0ce9254ef9726dd660c8720c4cf617e9'}}
+-操作类型 提取数据JSON
+-全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'msg_token': '0ce9254ef9726dd660c8720c4cf617e9'}
+-操作类型 提取数据JSON
+-全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'msg_token': '0ce9254ef9726dd660c8720c4cf617e9', 'sj_msg': '登录成功'}
+Index: allure-results/f6d0a064-4ded-4ce6-87f0-416b8e81358e-attachment.txt
+===================================================================
+diff --git a/allure-results/f6d0a064-4ded-4ce6-87f0-416b8e81358e-attachment.txt b/allure-results/f6d0a064-4ded-4ce6-87f0-416b8e81358e-attachment.txt
+deleted file mode 100644
+--- a/allure-results/f6d0a064-4ded-4ce6-87f0-416b8e81358e-attachment.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,4 +0,0 @@
+-
+-开始执行:   0%|          | 0/1 [00:00<?, ?it/s]
+-登录用例标题-当前步骤:发送登录接口:   0%|          | 0/1 [00:00<?, ?it/s]
+-登录用例标题-当前步骤:发送登录接口: 100%|██████████| 1/1 [00:00<00:00,  1.91it/s]
+Index: allure-results/f3f77c50-608d-4ee5-a440-f50bc5ce4695-result.json
+===================================================================
+diff --git a/allure-results/f3f77c50-608d-4ee5-a440-f50bc5ce4695-result.json b/allure-results/f3f77c50-608d-4ee5-a440-f50bc5ce4695-result.json
+deleted file mode 100644
+--- a/allure-results/f3f77c50-608d-4ee5-a440-f50bc5ce4695-result.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,1 +0,0 @@
+-{"name": "购物车用例标题", "status": "passed", "steps": [{"name": "发送购物车接口", "status": "passed", "steps": [{"name": "发送请求POST", "status": "passed", "parameters": [{"name": "操作类型", "value": "'发送请求POST'"}, {"name": "请求地址", "value": "'http://shop-xo.hctestedu.com'"}, {"name": "URL参数", "value": "{'s': 'api/cart/save', 'application': 'app', 'application_client_type': 'weixin', 'token': '0ce9254ef9726dd660c8720c4cf617e9'}"}, {"name": "请求数据", "value": "{'goods_id': '2,', 'stock': '1,'}"}], "start": 1765813162248, "stop": 1765813163093}], "start": 1765813162248, "stop": 1765813163093}], "attachments": [{"name": "stdout", "source": "143b3e1a-0ab2-4a27-9d5b-eb7e5185c1bc-attachment.txt", "type": "text/plain"}, {"name": "stderr", "source": "8ecbe0cb-0802-47af-9c71-c246c778e71f-attachment.txt", "type": "text/plain"}], "parameters": [{"name": "caseinfo", "value": "''"}], "start": 1765813162247, "stop": 1765813163093, "uuid": "cf57ff13-d92f-47e1-91bd-3fc3b8d9f75e", "historyId": "9649706730c3ec72fb79c6d2e895cdbc", "testCaseId": "11ed856f279f533803b86e8eaedfbe52", "fullName": "HAT.core.TestRunner.TestRunner#test_case_execute", "labels": [{"name": "feature", "value": "购物车模块"}, {"name": "story", "value": "购物车功能"}, {"name": "parentSuite", "value": "HAT.core"}, {"name": "suite", "value": "TestRunner"}, {"name": "subSuite", "value": "TestRunner"}, {"name": "host", "value": "DESKTOP-VUHS4PA"}, {"name": "thread", "value": "42280-MainThread"}, {"name": "framework", "value": "pytest"}, {"name": "language", "value": "cpython3"}, {"name": "package", "value": "HAT.core.TestRunner"}], "titlePath": ["HAT", "core", "TestRunner.py", "TestRunner"]}
+\ No newline at end of file
+Index: allure-results/5d090668-e43a-4abf-a8c9-7313163f4576-attachment.txt
+===================================================================
+diff --git a/allure-results/5d090668-e43a-4abf-a8c9-7313163f4576-attachment.txt b/allure-results/5d090668-e43a-4abf-a8c9-7313163f4576-attachment.txt
+deleted file mode 100644
+--- a/allure-results/5d090668-e43a-4abf-a8c9-7313163f4576-attachment.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,7 +0,0 @@
+-
+-开始执行:   0%|          | 0/3 [00:00<?, ?it/s]
+-登录用例标题-当前步骤:发送登录接口:   0%|          | 0/3 [00:00<?, ?it/s]
+-登录用例标题-当前步骤:提取响应数据token:  33%|███▎      | 1/3 [00:00<00:00,  2.06it/s]
+-登录用例标题-当前步骤:提取响应数据token:  67%|██████▋   | 2/3 [00:00<00:00,  4.13it/s]
+-登录用例标题-当前步骤:提取响应数据msg:  67%|██████▋   | 2/3 [00:00<00:00,  4.13it/s]  
+-登录用例标题-当前步骤:提取响应数据msg: 100%|██████████| 3/3 [00:00<00:00,  6.16it/s]
+Index: allure-results/57e8e340-1a5b-4358-8195-b9b4a0cde4ba-result.json
+===================================================================
+diff --git a/allure-results/57e8e340-1a5b-4358-8195-b9b4a0cde4ba-result.json b/allure-results/57e8e340-1a5b-4358-8195-b9b4a0cde4ba-result.json
+deleted file mode 100644
+--- a/allure-results/57e8e340-1a5b-4358-8195-b9b4a0cde4ba-result.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,1 +0,0 @@
+-{"name": "登录用例标题", "status": "passed", "steps": [{"name": "发送登录接口", "status": "passed", "steps": [{"name": "发送请求POST", "status": "passed", "parameters": [{"name": "操作类型", "value": "'发送请求POST'"}, {"name": "请求地址", "value": "'http://shop-xo.hctestedu.com'"}, {"name": "URL参数", "value": "{'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}"}, {"name": "请求数据", "value": "{'accounts': 'test_user_001', 'pwd': 'Test@123456', 'type': 'username'}"}], "start": 1765715654353, "stop": 1765715654873}], "start": 1765715654350, "stop": 1765715654873}], "attachments": [{"name": "stdout", "source": "89f82845-4b17-414c-94a4-6d776d2ef0e5-attachment.txt", "type": "text/plain"}, {"name": "stderr", "source": "f6d0a064-4ded-4ce6-87f0-416b8e81358e-attachment.txt", "type": "text/plain"}], "parameters": [{"name": "caseinfo", "value": "''"}], "start": 1765715654338, "stop": 1765715654873, "uuid": "2b615b19-f9b5-4466-a928-c8458a8d6976", "historyId": "70a04644797f5954429c697065a36448", "testCaseId": "11ed856f279f533803b86e8eaedfbe52", "fullName": "HAT.core.TestRunner.TestRunner#test_case_execute", "labels": [{"name": "feature", "value": "登录模块"}, {"name": "story", "value": "登录功能"}, {"name": "parentSuite", "value": "HAT.core"}, {"name": "suite", "value": "TestRunner"}, {"name": "subSuite", "value": "TestRunner"}, {"name": "host", "value": "DESKTOP-VUHS4PA"}, {"name": "thread", "value": "26508-MainThread"}, {"name": "framework", "value": "pytest"}, {"name": "language", "value": "cpython3"}, {"name": "package", "value": "HAT.core.TestRunner"}], "titlePath": ["HAT", "core", "TestRunner.py", "TestRunner"]}
+\ No newline at end of file
+Index: allure-results/39abd726-fe92-43e1-954d-1dbda80810a2-container.json
+===================================================================
+diff --git a/allure-results/39abd726-fe92-43e1-954d-1dbda80810a2-container.json b/allure-results/39abd726-fe92-43e1-954d-1dbda80810a2-container.json
+deleted file mode 100644
+--- a/allure-results/39abd726-fe92-43e1-954d-1dbda80810a2-container.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,1 +0,0 @@
+-{"uuid": "d62c5d36-0930-4df4-9a6b-012396b8d683", "befores": [{"name": "caseinfo", "status": "passed", "start": 1765715654336, "stop": 1765715654336}], "start": 1765715654336, "stop": 1765715654873}
+\ No newline at end of file
+Index: allure-report/data/test-cases/1a7c34fc8432faa7.json
+===================================================================
+diff --git a/allure-report/data/test-cases/1a7c34fc8432faa7.json b/allure-report/data/test-cases/1a7c34fc8432faa7.json
+deleted file mode 100644
+--- a/allure-report/data/test-cases/1a7c34fc8432faa7.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,1 +0,0 @@
+-{"uid":"1a7c34fc8432faa7","name":"购物车用例标题","fullName":"HAT.core.TestRunner.TestRunner#test_case_execute","historyId":"9649706730c3ec72fb79c6d2e895cdbc","time":{"start":1765813162247,"stop":1765813163093,"duration":846},"status":"passed","flaky":false,"newFailed":false,"newBroken":false,"newPassed":false,"retriesCount":0,"retriesStatusChange":false,"beforeStages":[],"testStage":{"status":"passed","steps":[{"name":"发送购物车接口","time":{"start":1765813162248,"stop":1765813163093,"duration":845},"status":"passed","steps":[{"name":"发送请求POST","time":{"start":1765813162248,"stop":1765813163093,"duration":845},"status":"passed","steps":[],"attachments":[],"parameters":[{"name":"操作类型","value":"'发送请求POST'"},{"name":"请求地址","value":"'http://shop-xo.hctestedu.com'"},{"name":"URL参数","value":"{'s': 'api/cart/save', 'application': 'app', 'application_client_type': 'weixin', 'token': '0ce9254ef9726dd660c8720c4cf617e9'}"},{"name":"请求数据","value":"{'goods_id': '2,', 'stock': '1,'}"}],"shouldDisplayMessage":false,"attachmentsCount":0,"stepsCount":0,"attachmentStep":false,"hasContent":true}],"attachments":[],"parameters":[],"shouldDisplayMessage":false,"attachmentsCount":0,"stepsCount":1,"attachmentStep":false,"hasContent":true}],"attachments":[{"uid":"eca041c50f7d5b9","name":"stdout","source":"eca041c50f7d5b9.txt","type":"text/plain","size":123},{"uid":"2386101d45247021","name":"stderr","source":"2386101d45247021.txt","type":"text/plain","size":273}],"parameters":[],"shouldDisplayMessage":false,"attachmentsCount":2,"stepsCount":2,"attachmentStep":false,"hasContent":true},"afterStages":[],"labels":[{"name":"feature","value":"购物车模块"},{"name":"story","value":"购物车功能"},{"name":"parentSuite","value":"HAT.core"},{"name":"suite","value":"TestRunner"},{"name":"subSuite","value":"TestRunner"},{"name":"host","value":"DESKTOP-VUHS4PA"},{"name":"thread","value":"42280-MainThread"},{"name":"framework","value":"pytest"},{"name":"language","value":"cpython3"},{"name":"package","value":"HAT.core.TestRunner"},{"name":"resultFormat","value":"allure2"}],"parameters":[{"name":"caseinfo","value":"''"}],"links":[],"hidden":false,"retry":false,"extra":{"severity":"normal","retries":[],"categories":[],"tags":[]},"source":"1a7c34fc8432faa7.json","parameterValues":["''"]}
+\ No newline at end of file
+Index: README.md
+===================================================================
+diff --git a/README.md b/README.md
+deleted file mode 100644
+--- a/README.md	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,39 +0,0 @@
+-# APIrequests
+-
+-#### 介绍
+-{**以下是 Gitee 平台说明，您可以替换此简介**
+-Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
+-无论是个人、团队、或是企业，都能够用 Gitee 实现代码托管、项目管理、协作开发。企业项目请看 [https://gitee.com/enterprises](https://gitee.com/enterprises)}
+-
+-#### 软件架构
+-软件架构说明
+-
+-
+-#### 安装教程
+-
+-1.  xxxx
+-2.  xxxx
+-3.  xxxx
+-
+-#### 使用说明
+-
+-1.  xxxx
+-2.  xxxx
+-3.  xxxx
+-
+-#### 参与贡献
+-
+-1.  Fork 本仓库
+-2.  新建 Feat_xxx 分支
+-3.  提交代码
+-4.  新建 Pull Request
+-
+-
+-#### 特技
+-
+-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
+-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
+-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
+-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
+-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
+-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+Index: allure-results/8ffd3690-14c4-4fec-86fa-d3b1d45a0608-attachment.txt
+===================================================================
+diff --git a/allure-results/8ffd3690-14c4-4fec-86fa-d3b1d45a0608-attachment.txt b/allure-results/8ffd3690-14c4-4fec-86fa-d3b1d45a0608-attachment.txt
+deleted file mode 100644
+--- a/allure-results/8ffd3690-14c4-4fec-86fa-d3b1d45a0608-attachment.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,7 +0,0 @@
+-数据类型 <class 'dict'>
+-操作类型 发送请求POST
+-登陆响应数据 {'msg': '登录成功', 'code': 0, 'data': {'id': '12086', 'username': 'test_user_001', 'nickname': '', 'mobile': '', 'email': '', 'avatar': 'http://shop-xo.hctestedu.com/static/index/default/images/default-user-avatar.jpg', 'alipay_openid': '', 'weixin_openid': '', 'weixin_unionid': '', 'weixin_web_openid': '', 'baidu_openid': '', 'toutiao_openid': '', 'qq_openid': '', 'qq_unionid': '', 'integral': '0', 'locking_integral': '0', 'referrer': '0', 'add_time': '1763708668', 'add_time_text': '2025-11-21 15:04:28', 'mobile_security': '', 'email_security': '', 'user_name_view': 'test_user_001', 'is_mandatory_bind_mobile': 0, 'token': '0ce9254ef9726dd660c8720c4cf617e9'}}
+-操作类型 提取数据JSON
+-全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'msg_token': '0ce9254ef9726dd660c8720c4cf617e9'}
+-操作类型 提取数据JSON
+-全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'msg_token': '0ce9254ef9726dd660c8720c4cf617e9', 'sj_msg': '登录成功'}
+Index: allure-results/ad050fd7-abd4-48c0-bb51-9be3040f75af-result.json
+===================================================================
+diff --git a/allure-results/ad050fd7-abd4-48c0-bb51-9be3040f75af-result.json b/allure-results/ad050fd7-abd4-48c0-bb51-9be3040f75af-result.json
+deleted file mode 100644
+--- a/allure-results/ad050fd7-abd4-48c0-bb51-9be3040f75af-result.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,1 +0,0 @@
+-{"name": "登录用例标题", "status": "passed", "steps": [{"name": "发送登录接口", "status": "passed", "steps": [{"name": "发送请求POST", "status": "passed", "parameters": [{"name": "操作类型", "value": "'发送请求POST'"}, {"name": "请求地址", "value": "'http://shop-xo.hctestedu.com'"}, {"name": "URL参数", "value": "{'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}"}, {"name": "请求数据", "value": "{'accounts': 'test_user_001', 'pwd': 'Test@123456', 'type': 'username'}"}], "start": 1765813161757, "stop": 1765813162241}], "start": 1765813161757, "stop": 1765813162241}, {"name": "提取响应数据token", "status": "passed", "steps": [{"name": "提取数据JSON", "status": "passed", "parameters": [{"name": "操作类型", "value": "'提取数据JSON'"}, {"name": "表达式", "value": "'$..token'"}, {"name": "变量名", "value": "'msg_token'"}], "start": 1765813162242, "stop": 1765813162242}], "start": 1765813162241, "stop": 1765813162242}, {"name": "提取响应数据msg", "status": "passed", "steps": [{"name": "提取数据JSON", "status": "passed", "parameters": [{"name": "操作类型", "value": "'提取数据JSON'"}, {"name": "表达式", "value": "'$..msg'"}, {"name": "变量名", "value": "'sj_msg'"}], "start": 1765813162243, "stop": 1765813162243}], "start": 1765813162242, "stop": 1765813162243}], "attachments": [{"name": "stdout", "source": "8ffd3690-14c4-4fec-86fa-d3b1d45a0608-attachment.txt", "type": "text/plain"}, {"name": "stderr", "source": "5d090668-e43a-4abf-a8c9-7313163f4576-attachment.txt", "type": "text/plain"}], "parameters": [{"name": "caseinfo", "value": "''"}], "start": 1765813161749, "stop": 1765813162243, "uuid": "7c04e016-6c0f-4b5b-8626-2af668be834b", "historyId": "08959e845036c7af9e93cd5455c53be2", "testCaseId": "11ed856f279f533803b86e8eaedfbe52", "fullName": "HAT.core.TestRunner.TestRunner#test_case_execute", "labels": [{"name": "feature", "value": "登录模块"}, {"name": "story", "value": "登录功能"}, {"name": "parentSuite", "value": "HAT.core"}, {"name": "suite", "value": "TestRunner"}, {"name": "subSuite", "value": "TestRunner"}, {"name": "host", "value": "DESKTOP-VUHS4PA"}, {"name": "thread", "value": "42280-MainThread"}, {"name": "framework", "value": "pytest"}, {"name": "language", "value": "cpython3"}, {"name": "package", "value": "HAT.core.TestRunner"}], "titlePath": ["HAT", "core", "TestRunner.py", "TestRunner"]}
+\ No newline at end of file
+Index: allure-results/7eeb7955-2506-43bc-bd58-445466c36814-container.json
+===================================================================
+diff --git a/allure-results/7eeb7955-2506-43bc-bd58-445466c36814-container.json b/allure-results/7eeb7955-2506-43bc-bd58-445466c36814-container.json
+deleted file mode 100644
+--- a/allure-results/7eeb7955-2506-43bc-bd58-445466c36814-container.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,1 +0,0 @@
+-{"uuid": "b85afa99-c2ab-4e6e-a925-e35dc0899c10", "befores": [{"name": "caseinfo", "status": "passed", "start": 1765813161748, "stop": 1765813161748}], "start": 1765813161748, "stop": 1765813162243}
+\ No newline at end of file
+Index: allure-report/data/attachments/ed75f87ad26a1803.txt
+===================================================================
+diff --git a/allure-report/data/attachments/ed75f87ad26a1803.txt b/allure-report/data/attachments/ed75f87ad26a1803.txt
+deleted file mode 100644
+--- a/allure-report/data/attachments/ed75f87ad26a1803.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,4 +0,0 @@
+-
+-开始执行:   0%|          | 0/1 [00:00<?, ?it/s]
+-登录用例标题-当前步骤:发送登录接口:   0%|          | 0/1 [00:00<?, ?it/s]
+-登录用例标题-当前步骤:发送登录接口: 100%|██████████| 1/1 [00:00<00:00,  1.91it/s]
+Index: allure-report/data/attachments/80b121384af97a10.txt
+===================================================================
+diff --git a/allure-report/data/attachments/80b121384af97a10.txt b/allure-report/data/attachments/80b121384af97a10.txt
+deleted file mode 100644
+--- a/allure-report/data/attachments/80b121384af97a10.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,4 +0,0 @@
+-数据类型 <class 'dict'>
+-没有渲染前的字典值数据 {'操作类型': '发送请求POST', '请求地址': '{{URL}}', 'URL参数': {'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}, '请求数据': {'accounts': 'test_user_001', 'pwd': 'Test@123456', 'type': 'username'}}
+-渲染后的字典值数据 {'操作类型': '发送请求POST', '请求地址': 'http://shop-xo.hctestedu.com', 'URL参数': {'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}, '请求数据': {'accounts': 'test_user_001', 'pwd': 'Test@123456', 'type': 'username'}}
+-登陆响应数据 {'msg': '登录成功', 'code': 0, 'data': {'id': '12086', 'username': 'test_user_001', 'nickname': '', 'mobile': '', 'email': '', 'avatar': 'http://shop-xo.hctestedu.com/static/index/default/images/default-user-avatar.jpg', 'alipay_openid': '', 'weixin_openid': '', 'weixin_unionid': '', 'weixin_web_openid': '', 'baidu_openid': '', 'toutiao_openid': '', 'qq_openid': '', 'qq_unionid': '', 'integral': '0', 'locking_integral': '0', 'referrer': '0', 'add_time': '1763708668', 'add_time_text': '2025-11-21 15:04:28', 'mobile_security': '', 'email_security': '', 'user_name_view': 'test_user_001', 'is_mandatory_bind_mobile': 0, 'token': '0a0519569f389ee0d0ede5f3a053f3ff'}}
+Index: allure-results/61d1972d-2eca-4a9e-a36e-7f319f8cec6a-container.json
+===================================================================
+diff --git a/allure-results/61d1972d-2eca-4a9e-a36e-7f319f8cec6a-container.json b/allure-results/61d1972d-2eca-4a9e-a36e-7f319f8cec6a-container.json
+deleted file mode 100644
+--- a/allure-results/61d1972d-2eca-4a9e-a36e-7f319f8cec6a-container.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,1 +0,0 @@
+-{"uuid": "0895bf81-40a4-44be-8d66-8f2334174ea1", "befores": [{"name": "caseinfo", "status": "passed", "start": 1765813162247, "stop": 1765813162247}], "start": 1765813162247, "stop": 1765813163094}
+\ No newline at end of file
+Index: allure-report/data/attachments/2386101d45247021.txt
+===================================================================
+diff --git a/allure-report/data/attachments/2386101d45247021.txt b/allure-report/data/attachments/2386101d45247021.txt
+deleted file mode 100644
+--- a/allure-report/data/attachments/2386101d45247021.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,4 +0,0 @@
+-
+-开始执行:   0%|          | 0/1 [00:00<?, ?it/s]
+-购物车用例标题-当前步骤:发送购物车接口:   0%|          | 0/1 [00:00<?, ?it/s]
+-购物车用例标题-当前步骤:发送购物车接口: 100%|██████████| 1/1 [00:00<00:00,  1.18it/s]
+Index: allure-report/data/attachments/eca041c50f7d5b9.txt
+===================================================================
+diff --git a/allure-report/data/attachments/eca041c50f7d5b9.txt b/allure-report/data/attachments/eca041c50f7d5b9.txt
+deleted file mode 100644
+--- a/allure-report/data/attachments/eca041c50f7d5b9.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,3 +0,0 @@
+-数据类型 <class 'dict'>
+-操作类型 发送请求POST
+-登陆响应数据 {'msg': '加入成功', 'code': 0, 'data': 1}
+Index: README.en.md
+===================================================================
+diff --git a/README.en.md b/README.en.md
+deleted file mode 100644
+--- a/README.en.md	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,36 +0,0 @@
+-# APIrequests
+-
+-#### Description
+-{**When you're done, you can delete the content in this README and update the file with details for others getting started with your repository**}
+-
+-#### Software Architecture
+-Software architecture description
+-
+-#### Installation
+-
+-1.  xxxx
+-2.  xxxx
+-3.  xxxx
+-
+-#### Instructions
+-
+-1.  xxxx
+-2.  xxxx
+-3.  xxxx
+-
+-#### Contribution
+-
+-1.  Fork the repository
+-2.  Create Feat_xxx branch
+-3.  Commit your code
+-4.  Create Pull Request
+-
+-
+-#### Gitee Feature
+-
+-1.  You can use Readme\_XXX.md to support different languages, such as Readme\_en.md, Readme\_zh.md
+-2.  Gitee blog [blog.gitee.com](https://blog.gitee.com)
+-3.  Explore open source project [https://gitee.com/explore](https://gitee.com/explore)
+-4.  The most valuable open source project [GVP](https://gitee.com/gvp)
+-5.  The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
+-6.  The most popular members  [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+Index: allure-results/89f82845-4b17-414c-94a4-6d776d2ef0e5-attachment.txt
+===================================================================
+diff --git a/allure-results/89f82845-4b17-414c-94a4-6d776d2ef0e5-attachment.txt b/allure-results/89f82845-4b17-414c-94a4-6d776d2ef0e5-attachment.txt
+deleted file mode 100644
+--- a/allure-results/89f82845-4b17-414c-94a4-6d776d2ef0e5-attachment.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,4 +0,0 @@
+-数据类型 <class 'dict'>
+-没有渲染前的字典值数据 {'操作类型': '发送请求POST', '请求地址': '{{URL}}', 'URL参数': {'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}, '请求数据': {'accounts': 'test_user_001', 'pwd': 'Test@123456', 'type': 'username'}}
+-渲染后的字典值数据 {'操作类型': '发送请求POST', '请求地址': 'http://shop-xo.hctestedu.com', 'URL参数': {'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}, '请求数据': {'accounts': 'test_user_001', 'pwd': 'Test@123456', 'type': 'username'}}
+-登陆响应数据 {'msg': '登录成功', 'code': 0, 'data': {'id': '12086', 'username': 'test_user_001', 'nickname': '', 'mobile': '', 'email': '', 'avatar': 'http://shop-xo.hctestedu.com/static/index/default/images/default-user-avatar.jpg', 'alipay_openid': '', 'weixin_openid': '', 'weixin_unionid': '', 'weixin_web_openid': '', 'baidu_openid': '', 'toutiao_openid': '', 'qq_openid': '', 'qq_unionid': '', 'integral': '0', 'locking_integral': '0', 'referrer': '0', 'add_time': '1763708668', 'add_time_text': '2025-11-21 15:04:28', 'mobile_security': '', 'email_security': '', 'user_name_view': 'test_user_001', 'is_mandatory_bind_mobile': 0, 'token': '0a0519569f389ee0d0ede5f3a053f3ff'}}
+Index: allure-report/data/test-cases/5e36f5daab846a86.json
+===================================================================
+diff --git a/allure-report/data/test-cases/5e36f5daab846a86.json b/allure-report/data/test-cases/5e36f5daab846a86.json
+deleted file mode 100644
+--- a/allure-report/data/test-cases/5e36f5daab846a86.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ /dev/null	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
+@@ -1,1 +0,0 @@
+-{"uid":"5e36f5daab846a86","name":"登录用例标题","fullName":"HAT.core.TestRunner.TestRunner#test_case_execute","historyId":"70a04644797f5954429c697065a36448","time":{"start":1765715654338,"stop":1765715654873,"duration":535},"status":"passed","flaky":false,"newFailed":false,"newBroken":false,"newPassed":false,"retriesCount":0,"retriesStatusChange":false,"beforeStages":[],"testStage":{"status":"passed","steps":[{"name":"发送登录接口","time":{"start":1765715654350,"stop":1765715654873,"duration":523},"status":"passed","steps":[{"name":"发送请求POST","time":{"start":1765715654353,"stop":1765715654873,"duration":520},"status":"passed","steps":[],"attachments":[],"parameters":[{"name":"操作类型","value":"'发送请求POST'"},{"name":"请求地址","value":"'http://shop-xo.hctestedu.com'"},{"name":"URL参数","value":"{'s': '/api/user/login', 'application': 'app', 'application_client_type': 'weixin'}"},{"name":"请求数据","value":"{'accounts': 'test_user_001', 'pwd': 'Test@123456', 'type': 'username'}"}],"stepsCount":0,"attachmentStep":false,"hasContent":true,"attachmentsCount":0,"shouldDisplayMessage":false}],"attachments":[],"parameters":[],"stepsCount":1,"attachmentStep":false,"hasContent":true,"attachmentsCount":0,"shouldDisplayMessage":false}],"attachments":[{"uid":"80b121384af97a10","name":"stdout","source":"80b121384af97a10.txt","type":"text/plain","size":1305},{"uid":"ed75f87ad26a1803","name":"stderr","source":"ed75f87ad26a1803.txt","type":"text/plain","size":261}],"parameters":[],"stepsCount":2,"attachmentStep":false,"hasContent":true,"attachmentsCount":2,"shouldDisplayMessage":false},"afterStages":[],"labels":[{"name":"feature","value":"登录模块"},{"name":"story","value":"登录功能"},{"name":"parentSuite","value":"HAT.core"},{"name":"suite","value":"TestRunner"},{"name":"subSuite","value":"TestRunner"},{"name":"host","value":"DESKTOP-VUHS4PA"},{"name":"thread","value":"26508-MainThread"},{"name":"framework","value":"pytest"},{"name":"language","value":"cpython3"},{"name":"package","value":"HAT.core.TestRunner"},{"name":"resultFormat","value":"allure2"}],"parameters":[{"name":"caseinfo","value":"''"}],"links":[],"hidden":false,"retry":false,"extra":{"severity":"normal","retries":[],"categories":[],"tags":[]},"source":"5e36f5daab846a86.json","parameterValues":["''"]}
+\ No newline at end of file
+Index: allure-report/data/packages.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\"uid\":\"83edc06c07f9ae9e47eb6dd1b683e4e2\",\"name\":\"packages\",\"children\":[{\"name\":\"HAT.core.TestRunner\",\"children\":[{\"name\":\"登录用例标题\",\"uid\":\"5e36f5daab846a86\",\"parentUid\":\"4f49bfd95b07058304187c1f573400fa\",\"status\":\"passed\",\"time\":{\"start\":1765715654338,\"stop\":1765715654873,\"duration\":535},\"flaky\":false,\"newFailed\":false,\"newPassed\":false,\"newBroken\":false,\"retriesCount\":0,\"retriesStatusChange\":false,\"parameters\":[\"''\"],\"tags\":[]}],\"uid\":\"HAT.core.TestRunner\"}]}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/data/packages.json b/allure-report/data/packages.json
+--- a/allure-report/data/packages.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/data/packages.json	(date 1765962469165)
+@@ -1,1 +1,1 @@
+-{"uid":"83edc06c07f9ae9e47eb6dd1b683e4e2","name":"packages","children":[{"name":"HAT.core.TestRunner","children":[{"name":"登录用例标题","uid":"5e36f5daab846a86","parentUid":"4f49bfd95b07058304187c1f573400fa","status":"passed","time":{"start":1765715654338,"stop":1765715654873,"duration":535},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"HAT.core.TestRunner"}]}
+\ No newline at end of file
++{"uid":"83edc06c07f9ae9e47eb6dd1b683e4e2","name":"packages","children":[{"name":"HAT.core.TestRunner","children":[{"name":"登录用例标题","uid":"bf4874b085278c51","parentUid":"4f49bfd95b07058304187c1f573400fa","status":"passed","time":{"start":1765962464791,"stop":1765962465309,"duration":518},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"购物车用例标题","uid":"c8267926e0e7907","parentUid":"4f49bfd95b07058304187c1f573400fa","status":"passed","time":{"start":1765962465313,"stop":1765962465981,"duration":668},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"购物车用例标题","uid":"c523dc2eb118aa37","parentUid":"4f49bfd95b07058304187c1f573400fa","status":"passed","time":{"start":1765962465984,"stop":1765962466536,"duration":552},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"地址用例标题","uid":"2ca90ee71b422b6e","parentUid":"4f49bfd95b07058304187c1f573400fa","status":"passed","time":{"start":1765962466539,"stop":1765962467022,"duration":483},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"订单用例标题","uid":"754ed191398f7708","parentUid":"4f49bfd95b07058304187c1f573400fa","status":"passed","time":{"start":1765962467025,"stop":1765962467584,"duration":559},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"HAT.core.TestRunner"}]}
+\ No newline at end of file
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"AutoImportSettings\">\r\n    <option name=\"autoReloadType\" value=\"SELECTIVE\" />\r\n  </component>\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"5bb02aa6-dc14-43f1-ad8a-89f49de3fac4\" name=\"更改\" comment=\"测试\" />\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"FileTemplateManagerImpl\">\r\n    <option name=\"RECENT_TEMPLATES\">\r\n      <list>\r\n        <option value=\"Python Script\" />\r\n      </list>\r\n    </option>\r\n  </component>\r\n  <component name=\"Git.Rebase.Settings\">\r\n    <option name=\"NEW_BASE\" value=\"master\" />\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$\" />\r\n  </component>\r\n  <component name=\"ProjectColorInfo\">{\r\n  &quot;associatedIndex&quot;: 3\r\n}</component>\r\n  <component name=\"ProjectId\" id=\"363VQWeGDe3PhLhES9aZNVU7eUt\" />\r\n  <component name=\"ProjectLevelVcsManager\">\r\n    <ConfirmationsSetting value=\"1\" id=\"Add\" />\r\n  </component>\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\">{\r\n  &quot;keyToString&quot;: {\r\n    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,\r\n    &quot;Python.1.executor&quot;: &quot;Run&quot;,\r\n    &quot;Python.VarRender.executor&quot;: &quot;Run&quot;,\r\n    &quot;Python.YamlCaseParser.executor&quot;: &quot;Run&quot;,\r\n    &quot;Python.api参数.executor&quot;: &quot;Run&quot;,\r\n    &quot;Python.login.executor&quot;: &quot;Run&quot;,\r\n    &quot;Python.main (1).executor&quot;: &quot;Run&quot;,\r\n    &quot;Python.main.executor&quot;: &quot;Run&quot;,\r\n    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,\r\n    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,\r\n    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,\r\n    &quot;git-widget-placeholder&quot;: &quot;master&quot;,\r\n    &quot;last_opened_file_path&quot;: &quot;F:/request&quot;,\r\n    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;\r\n  }\r\n}</component>\r\n  <component name=\"RecentsManager\">\r\n    <key name=\"CopyFile.RECENT_KEYS\">\r\n      <recent name=\"F:\\request\\HAT\\examples\" />\r\n    </key>\r\n    <key name=\"MoveFile.RECENT_KEYS\">\r\n      <recent name=\"F:\\request\\HAT\\examples\\api-cases-yaml\" />\r\n      <recent name=\"F:\\request\" />\r\n    </key>\r\n  </component>\r\n  <component name=\"RunManager\" selected=\"Python.main\">\r\n    <configuration name=\"1\" type=\"PythonConfigurationType\" factoryName=\"Python\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <module name=\"request\" />\r\n      <option name=\"ENV_FILES\" value=\"\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <envs>\r\n        <env name=\"PYTHONUNBUFFERED\" value=\"1\" />\r\n      </envs>\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"true\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <option name=\"SCRIPT_NAME\" value=\"$PROJECT_DIR$/1.py\" />\r\n      <option name=\"PARAMETERS\" value=\"\" />\r\n      <option name=\"SHOW_COMMAND_LINE\" value=\"false\" />\r\n      <option name=\"EMULATE_TERMINAL\" value=\"false\" />\r\n      <option name=\"MODULE_MODE\" value=\"false\" />\r\n      <option name=\"REDIRECT_INPUT\" value=\"false\" />\r\n      <option name=\"INPUT_FILE\" value=\"\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <configuration name=\"VarRender\" type=\"PythonConfigurationType\" factoryName=\"Python\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <module name=\"request\" />\r\n      <option name=\"ENV_FILES\" value=\"\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <envs>\r\n        <env name=\"PYTHONUNBUFFERED\" value=\"1\" />\r\n      </envs>\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$/HAT/utils\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"true\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <option name=\"SCRIPT_NAME\" value=\"$PROJECT_DIR$/HAT/utils/VarRender.py\" />\r\n      <option name=\"PARAMETERS\" value=\"\" />\r\n      <option name=\"SHOW_COMMAND_LINE\" value=\"false\" />\r\n      <option name=\"EMULATE_TERMINAL\" value=\"false\" />\r\n      <option name=\"MODULE_MODE\" value=\"false\" />\r\n      <option name=\"REDIRECT_INPUT\" value=\"false\" />\r\n      <option name=\"INPUT_FILE\" value=\"\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <configuration name=\"YamlCaseParser\" type=\"PythonConfigurationType\" factoryName=\"Python\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <module name=\"request\" />\r\n      <option name=\"ENV_FILES\" value=\"\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <envs>\r\n        <env name=\"PYTHONUNBUFFERED\" value=\"1\" />\r\n      </envs>\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$/HAT/parse\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"true\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <option name=\"SCRIPT_NAME\" value=\"$PROJECT_DIR$/HAT/parse/YamlCaseParser.py\" />\r\n      <option name=\"PARAMETERS\" value=\"\" />\r\n      <option name=\"SHOW_COMMAND_LINE\" value=\"false\" />\r\n      <option name=\"EMULATE_TERMINAL\" value=\"false\" />\r\n      <option name=\"MODULE_MODE\" value=\"false\" />\r\n      <option name=\"REDIRECT_INPUT\" value=\"false\" />\r\n      <option name=\"INPUT_FILE\" value=\"\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <configuration name=\"main (1)\" type=\"PythonConfigurationType\" factoryName=\"Python\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <module name=\"request\" />\r\n      <option name=\"ENV_FILES\" value=\"\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <envs>\r\n        <env name=\"PYTHONUNBUFFERED\" value=\"1\" />\r\n      </envs>\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$/day09(5)(1)/day09\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"true\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <option name=\"SCRIPT_NAME\" value=\"$PROJECT_DIR$/day09(5)(1)/day09/main.py\" />\r\n      <option name=\"PARAMETERS\" value=\"\" />\r\n      <option name=\"SHOW_COMMAND_LINE\" value=\"false\" />\r\n      <option name=\"EMULATE_TERMINAL\" value=\"false\" />\r\n      <option name=\"MODULE_MODE\" value=\"false\" />\r\n      <option name=\"REDIRECT_INPUT\" value=\"false\" />\r\n      <option name=\"INPUT_FILE\" value=\"\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <configuration name=\"main\" type=\"PythonConfigurationType\" factoryName=\"Python\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <module name=\"request\" />\r\n      <option name=\"ENV_FILES\" value=\"\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <envs>\r\n        <env name=\"PYTHONUNBUFFERED\" value=\"1\" />\r\n      </envs>\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"true\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <option name=\"SCRIPT_NAME\" value=\"$PROJECT_DIR$/main.py\" />\r\n      <option name=\"PARAMETERS\" value=\"\" />\r\n      <option name=\"SHOW_COMMAND_LINE\" value=\"false\" />\r\n      <option name=\"EMULATE_TERMINAL\" value=\"false\" />\r\n      <option name=\"MODULE_MODE\" value=\"false\" />\r\n      <option name=\"REDIRECT_INPUT\" value=\"false\" />\r\n      <option name=\"INPUT_FILE\" value=\"\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <recent_temporary>\r\n      <list>\r\n        <item itemvalue=\"Python.main\" />\r\n        <item itemvalue=\"Python.YamlCaseParser\" />\r\n        <item itemvalue=\"Python.1\" />\r\n        <item itemvalue=\"Python.VarRender\" />\r\n        <item itemvalue=\"Python.main (1)\" />\r\n      </list>\r\n    </recent_temporary>\r\n  </component>\r\n  <component name=\"SharedIndexes\">\r\n    <attachedChunks>\r\n      <set>\r\n        <option value=\"bundled-python-sdk-164cda30dcd9-0af03a5fa574-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-252.26830.99\" />\r\n      </set>\r\n    </attachedChunks>\r\n  </component>\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"默认任务\">\r\n      <changelist id=\"5bb02aa6-dc14-43f1-ad8a-89f49de3fac4\" name=\"更改\" comment=\"\" />\r\n      <created>1764235226018</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1764235226018</updated>\r\n    </task>\r\n    <servers />\r\n  </component>\r\n  <component name=\"Vcs.Log.Tabs.Properties\">\r\n    <option name=\"TAB_STATES\">\r\n      <map>\r\n        <entry key=\"MAIN\">\r\n          <value>\r\n            <State />\r\n          </value>\r\n        </entry>\r\n      </map>\r\n    </option>\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/.idea/workspace.xml	(date 1766048033062)
+@@ -4,7 +4,63 @@
+     <option name="autoReloadType" value="SELECTIVE" />
+   </component>
+   <component name="ChangeListManager">
+-    <list default="true" id="5bb02aa6-dc14-43f1-ad8a-89f49de3fac4" name="更改" comment="测试" />
++    <list default="true" id="5bb02aa6-dc14-43f1-ad8a-89f49de3fac4" name="更改" comment="测试">
++      <change afterPath="$PROJECT_DIR$/examples/api-cases-yaml/3_viewcart.yaml" afterDir="false" />
++      <change afterPath="$PROJECT_DIR$/examples/api-cases-yaml/4_Viewtheaddress.yaml" afterDir="false" />
++      <change afterPath="$PROJECT_DIR$/examples/api-cases-yaml/5_Neworderplaced.yaml" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/1.py" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/HAT/core/TestRunner.py" beforeDir="false" afterPath="$PROJECT_DIR$/HAT/core/TestRunner.py" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/HAT/keywords/api_keywords.py" beforeDir="false" afterPath="$PROJECT_DIR$/HAT/keywords/api_keywords.py" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/README.en.md" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/2386101d45247021.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/51af9bc94b98b07e.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/7c9e1e81027f9026.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/80b121384af97a10.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/eca041c50f7d5b9.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/ed75f87ad26a1803.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/behaviors.csv" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/behaviors.csv" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/behaviors.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/behaviors.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/packages.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/packages.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/suites.csv" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/suites.csv" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/suites.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/suites.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/test-cases/1a7c34fc8432faa7.json" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/test-cases/1aaa2686e5a25035.json" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/test-cases/5e36f5daab846a86.json" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/data/timeline.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/timeline.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/export/influxDbData.txt" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/export/influxDbData.txt" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/export/prometheusData.txt" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/export/prometheusData.txt" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/history/duration-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/history/duration-trend.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/history/history-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/history/history-trend.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/history/history.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/history/history.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/history/retry-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/history/retry-trend.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/index.html" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/widgets/behaviors.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/behaviors.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/widgets/duration-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/duration-trend.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/widgets/duration.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/duration.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/widgets/history-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/history-trend.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/widgets/retry-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/retry-trend.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/widgets/severity.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/severity.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/widgets/status-chart.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/status-chart.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/widgets/suites.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/suites.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-report/widgets/summary.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/summary.json" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/143b3e1a-0ab2-4a27-9d5b-eb7e5185c1bc-attachment.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/39abd726-fe92-43e1-954d-1dbda80810a2-container.json" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/57e8e340-1a5b-4358-8195-b9b4a0cde4ba-result.json" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/5d090668-e43a-4abf-a8c9-7313163f4576-attachment.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/61d1972d-2eca-4a9e-a36e-7f319f8cec6a-container.json" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/7eeb7955-2506-43bc-bd58-445466c36814-container.json" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/89f82845-4b17-414c-94a4-6d776d2ef0e5-attachment.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/8ecbe0cb-0802-47af-9c71-c246c778e71f-attachment.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/8ffd3690-14c4-4fec-86fa-d3b1d45a0608-attachment.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/ad050fd7-abd4-48c0-bb51-9be3040f75af-result.json" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/f3f77c50-608d-4ee5-a440-f50bc5ce4695-result.json" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/allure-results/f6d0a064-4ded-4ce6-87f0-416b8e81358e-attachment.txt" beforeDir="false" />
++      <change beforePath="$PROJECT_DIR$/examples/api-cases-yaml/1_login.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/examples/api-cases-yaml/1_login.yaml" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/examples/api-cases-yaml/2_addcard.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/examples/api-cases-yaml/2_addcard.yaml" afterDir="false" />
++    </list>
+     <option name="SHOW_DIALOG" value="false" />
+     <option name="HIGHLIGHT_CONFLICTS" value="true" />
+     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+@@ -23,6 +79,18 @@
+   <component name="Git.Settings">
+     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+   </component>
++  <component name="GitHubPullRequestSearchHistory">{
++  &quot;lastFilter&quot;: {
++    &quot;state&quot;: &quot;OPEN&quot;,
++    &quot;assignee&quot;: &quot;Cyw991004&quot;
++  }
++}</component>
++  <component name="GithubPullRequestsUISettings">{
++  &quot;selectedUrlAndAccountId&quot;: {
++    &quot;url&quot;: &quot;https://github.com/Test-webkj/ApiRequest.git&quot;,
++    &quot;accountId&quot;: &quot;9cbd967e-8154-45bf-a210-27a203640151&quot;
++  }
++}</component>
+   <component name="ProjectColorInfo">{
+   &quot;associatedIndex&quot;: 3
+ }</component>
+@@ -34,24 +102,24 @@
+     <option name="hideEmptyMiddlePackages" value="true" />
+     <option name="showLibraryContents" value="true" />
+   </component>
+-  <component name="PropertiesComponent">{
+-  &quot;keyToString&quot;: {
+-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+-    &quot;Python.1.executor&quot;: &quot;Run&quot;,
+-    &quot;Python.VarRender.executor&quot;: &quot;Run&quot;,
+-    &quot;Python.YamlCaseParser.executor&quot;: &quot;Run&quot;,
+-    &quot;Python.api参数.executor&quot;: &quot;Run&quot;,
+-    &quot;Python.login.executor&quot;: &quot;Run&quot;,
+-    &quot;Python.main (1).executor&quot;: &quot;Run&quot;,
+-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+-    &quot;last_opened_file_path&quot;: &quot;F:/request&quot;,
+-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
++  <component name="PropertiesComponent"><![CDATA[{
++  "keyToString": {
++    "ModuleVcsDetector.initialDetectionPerformed": "true",
++    "Python.1.executor": "Run",
++    "Python.VarRender.executor": "Run",
++    "Python.YamlCaseParser.executor": "Run",
++    "Python.api参数.executor": "Run",
++    "Python.login.executor": "Run",
++    "Python.main (1).executor": "Run",
++    "Python.main.executor": "Run",
++    "RunOnceActivity.ShowReadmeOnStart": "true",
++    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
++    "RunOnceActivity.git.unshallow": "true",
++    "git-widget-placeholder": "master",
++    "last_opened_file_path": "F:/request",
++    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings"
+   }
+-}</component>
++}]]></component>
+   <component name="RecentsManager">
+     <key name="CopyFile.RECENT_KEYS">
+       <recent name="F:\request\HAT\examples" />
+@@ -128,7 +196,7 @@
+       <option name="INPUT_FILE" value="" />
+       <method v="2" />
+     </configuration>
+-    <configuration name="main (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
++    <configuration name="login" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+       <module name="request" />
+       <option name="ENV_FILES" value="" />
+       <option name="INTERPRETER_OPTIONS" value="" />
+@@ -137,11 +205,11 @@
+         <env name="PYTHONUNBUFFERED" value="1" />
+       </envs>
+       <option name="SDK_HOME" value="" />
+-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/day09(5)(1)/day09" />
++      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/shopapi" />
+       <option name="IS_MODULE_SDK" value="true" />
+       <option name="ADD_CONTENT_ROOTS" value="true" />
+       <option name="ADD_SOURCE_ROOTS" value="true" />
+-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/day09(5)(1)/day09/main.py" />
++      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/shopapi/login.py" />
+       <option name="PARAMETERS" value="" />
+       <option name="SHOW_COMMAND_LINE" value="false" />
+       <option name="EMULATE_TERMINAL" value="false" />
+@@ -175,10 +243,10 @@
+     <recent_temporary>
+       <list>
+         <item itemvalue="Python.main" />
++        <item itemvalue="Python.login" />
+         <item itemvalue="Python.YamlCaseParser" />
+         <item itemvalue="Python.1" />
+         <item itemvalue="Python.VarRender" />
+-        <item itemvalue="Python.main (1)" />
+       </list>
+     </recent_temporary>
+   </component>
+@@ -197,6 +265,15 @@
+       <option name="presentableId" value="Default" />
+       <updated>1764235226018</updated>
+     </task>
++    <task id="LOCAL-00001" summary="测试">
++      <option name="closed" value="true" />
++      <created>1765816010427</created>
++      <option name="number" value="00001" />
++      <option name="presentableId" value="LOCAL-00001" />
++      <option name="project" value="LOCAL" />
++      <updated>1765816010427</updated>
++    </task>
++    <option name="localTasksCounter" value="2" />
+     <servers />
+   </component>
+   <component name="Vcs.Log.Tabs.Properties">
+@@ -210,4 +287,11 @@
+       </map>
+     </option>
+   </component>
++  <component name="VcsManagerConfiguration">
++    <ignored-roots>
++      <path value="$PROJECT_DIR$/HAT" />
++    </ignored-roots>
++    <MESSAGE value="测试" />
++    <option name="LAST_COMMIT_MESSAGE" value="测试" />
++  </component>
+ </project>
+\ No newline at end of file
+Index: .idea/vcs.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"VcsDirectoryMappings\">\r\n    <mapping directory=\"$PROJECT_DIR$\" vcs=\"Git\" />\r\n    <mapping directory=\"$PROJECT_DIR$/HAT\" vcs=\"Git\" />\r\n    <mapping directory=\"$PROJECT_DIR$/HAT/apirequests\" vcs=\"Git\" />\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/vcs.xml b/.idea/vcs.xml
+--- a/.idea/vcs.xml	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/.idea/vcs.xml	(date 1766048033112)
+@@ -2,7 +2,5 @@
+ <project version="4">
+   <component name="VcsDirectoryMappings">
+     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+-    <mapping directory="$PROJECT_DIR$/HAT" vcs="Git" />
+-    <mapping directory="$PROJECT_DIR$/HAT/apirequests" vcs="Git" />
+   </component>
+ </project>
+\ No newline at end of file
+Index: allure-report/data/behaviors.csv
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>\"Epic\",\"Feature\",\"Story\",\"FAILED\",\"BROKEN\",\"PASSED\",\"SKIPPED\",\"UNKNOWN\"\r\n\"\",\"登录模块\",\"登录功能\",\"0\",\"0\",\"1\",\"0\",\"0\"\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/data/behaviors.csv b/allure-report/data/behaviors.csv
+--- a/allure-report/data/behaviors.csv	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/data/behaviors.csv	(date 1765962469161)
+@@ -1,2 +1,6 @@
+ "Epic","Feature","Story","FAILED","BROKEN","PASSED","SKIPPED","UNKNOWN"
++"","订单模块","提交订单功能","0","0","1","0","0"
++"","地址模块","查看地址功能","0","0","1","0","0"
++"","购物车模块","查看购物车功能","0","0","1","0","0"
+ "","登录模块","登录功能","0","0","1","0","0"
++"","购物车模块","加入购物车功能","0","0","1","0","0"
+Index: allure-report/data/behaviors.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\"uid\":\"b1a8273437954620fa374b796ffaacdd\",\"name\":\"behaviors\",\"children\":[{\"name\":\"登录模块\",\"children\":[{\"name\":\"登录功能\",\"children\":[{\"name\":\"登录用例标题\",\"uid\":\"5e36f5daab846a86\",\"parentUid\":\"77c8e60e806ab67bbe72b562bb863572\",\"status\":\"passed\",\"time\":{\"start\":1765715654338,\"stop\":1765715654873,\"duration\":535},\"flaky\":false,\"newFailed\":false,\"newPassed\":false,\"newBroken\":false,\"retriesCount\":0,\"retriesStatusChange\":false,\"parameters\":[\"''\"],\"tags\":[]}],\"uid\":\"77c8e60e806ab67bbe72b562bb863572\"}],\"uid\":\"6958045a481574bf02bb11ef07a7047b\"}]}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/data/behaviors.json b/allure-report/data/behaviors.json
+--- a/allure-report/data/behaviors.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/data/behaviors.json	(date 1765962469154)
+@@ -1,1 +1,1 @@
+-{"uid":"b1a8273437954620fa374b796ffaacdd","name":"behaviors","children":[{"name":"登录模块","children":[{"name":"登录功能","children":[{"name":"登录用例标题","uid":"5e36f5daab846a86","parentUid":"77c8e60e806ab67bbe72b562bb863572","status":"passed","time":{"start":1765715654338,"stop":1765715654873,"duration":535},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"77c8e60e806ab67bbe72b562bb863572"}],"uid":"6958045a481574bf02bb11ef07a7047b"}]}
+\ No newline at end of file
++{"uid":"b1a8273437954620fa374b796ffaacdd","name":"behaviors","children":[{"name":"登录模块","children":[{"name":"登录功能","children":[{"name":"登录用例标题","uid":"bf4874b085278c51","parentUid":"77c8e60e806ab67bbe72b562bb863572","status":"passed","time":{"start":1765962464791,"stop":1765962465309,"duration":518},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"77c8e60e806ab67bbe72b562bb863572"}],"uid":"6958045a481574bf02bb11ef07a7047b"},{"name":"购物车模块","children":[{"name":"加入购物车功能","children":[{"name":"购物车用例标题","uid":"c8267926e0e7907","parentUid":"d934b9643509006b4ae2c621b9d53afb","status":"passed","time":{"start":1765962465313,"stop":1765962465981,"duration":668},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"d934b9643509006b4ae2c621b9d53afb"},{"name":"查看购物车功能","children":[{"name":"购物车用例标题","uid":"c523dc2eb118aa37","parentUid":"f8774d0cde46b0e7757aa6e9f086b17d","status":"passed","time":{"start":1765962465984,"stop":1765962466536,"duration":552},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"f8774d0cde46b0e7757aa6e9f086b17d"}],"uid":"a83f24d9e1c208095768a6add7b4e5f8"},{"name":"地址模块","children":[{"name":"查看地址功能","children":[{"name":"地址用例标题","uid":"2ca90ee71b422b6e","parentUid":"8fdf1c829b2dda34e0c5e8bb86c7566e","status":"passed","time":{"start":1765962466539,"stop":1765962467022,"duration":483},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"8fdf1c829b2dda34e0c5e8bb86c7566e"}],"uid":"2ac868be9eb6cef30715c6c4b8d38646"},{"name":"订单模块","children":[{"name":"提交订单功能","children":[{"name":"订单用例标题","uid":"754ed191398f7708","parentUid":"a0c458f7ba7db0418aca94e88e4b6566","status":"passed","time":{"start":1765962467025,"stop":1765962467584,"duration":559},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"a0c458f7ba7db0418aca94e88e4b6566"}],"uid":"48ce8ab56fd87d7641d329eaf86d9e3f"}]}
+\ No newline at end of file
+Index: allure-report/widgets/behaviors.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\"total\":1,\"items\":[{\"uid\":\"6958045a481574bf02bb11ef07a7047b\",\"name\":\"登录模块\",\"statistic\":{\"failed\":0,\"broken\":0,\"skipped\":0,\"passed\":1,\"unknown\":0,\"total\":1}}]}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/widgets/behaviors.json b/allure-report/widgets/behaviors.json
+--- a/allure-report/widgets/behaviors.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/widgets/behaviors.json	(date 1765962469162)
+@@ -1,1 +1,1 @@
+-{"total":1,"items":[{"uid":"6958045a481574bf02bb11ef07a7047b","name":"登录模块","statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1}}]}
+\ No newline at end of file
++{"total":4,"items":[{"uid":"a83f24d9e1c208095768a6add7b4e5f8","name":"购物车模块","statistic":{"failed":0,"broken":0,"skipped":0,"passed":2,"unknown":0,"total":2}},{"uid":"6958045a481574bf02bb11ef07a7047b","name":"登录模块","statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1}},{"uid":"2ac868be9eb6cef30715c6c4b8d38646","name":"地址模块","statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1}},{"uid":"48ce8ab56fd87d7641d329eaf86d9e3f","name":"订单模块","statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1}}]}
+\ No newline at end of file
+Index: examples/api-cases-yaml/5_Neworderplaced.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/examples/api-cases-yaml/5_Neworderplaced.yaml b/examples/api-cases-yaml/5_Neworderplaced.yaml
+new file mode 100644
+--- /dev/null	(date 1765899458770)
++++ b/examples/api-cases-yaml/5_Neworderplaced.yaml	(date 1765899458770)
+@@ -0,0 +1,27 @@
++基础配置:  #后续测试报告中显示
++  用例类型: ApiCase
++  用例标题: 订单用例标题
++  一级模块: 订单模块
++  二级模块: 提交订单功能
++
++前置脚本: ""
++
++后置脚本: ""
++
++用例步骤:
++- 发送登录接口:
++    操作类型: 发送请求POST
++    请求地址: "{{URL}}"
++    URL参数:
++      s: /api/buy/add
++      application: app
++      application_client_type: weixin
++      token: "{{msg_token}}"
++
++    请求数据:
++      buy_type: "cart"
++      ids: "{{isd_id}}"
++      stock: "1"
++      spec: []
++      address_id: "{{dzid}}"
++      payment_id: "3"
+Index: allure-report/data/suites.csv
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>\"Status\",\"Start Time\",\"Stop Time\",\"Duration in ms\",\"Parent Suite\",\"Suite\",\"Sub Suite\",\"Test Class\",\"Test Method\",\"Name\",\"Description\"\r\n\"passed\",\"Sun Dec 14 20:34:14 CST 2025\",\"Sun Dec 14 20:34:14 CST 2025\",\"535\",\"HAT.core\",\"TestRunner\",\"TestRunner\",\"\",\"\",\"登录用例标题\",\"\"\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/data/suites.csv b/allure-report/data/suites.csv
+--- a/allure-report/data/suites.csv	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/data/suites.csv	(date 1765962468585)
+@@ -1,2 +1,6 @@
+ "Status","Start Time","Stop Time","Duration in ms","Parent Suite","Suite","Sub Suite","Test Class","Test Method","Name","Description"
+-"passed","Sun Dec 14 20:34:14 CST 2025","Sun Dec 14 20:34:14 CST 2025","535","HAT.core","TestRunner","TestRunner","","","登录用例标题",""
++"passed","Wed Dec 17 17:07:47 CST 2025","Wed Dec 17 17:07:47 CST 2025","559","HAT.core","TestRunner","TestRunner","","","订单用例标题",""
++"passed","Wed Dec 17 17:07:46 CST 2025","Wed Dec 17 17:07:47 CST 2025","483","HAT.core","TestRunner","TestRunner","","","地址用例标题",""
++"passed","Wed Dec 17 17:07:45 CST 2025","Wed Dec 17 17:07:46 CST 2025","552","HAT.core","TestRunner","TestRunner","","","购物车用例标题",""
++"passed","Wed Dec 17 17:07:44 CST 2025","Wed Dec 17 17:07:45 CST 2025","518","HAT.core","TestRunner","TestRunner","","","登录用例标题",""
++"passed","Wed Dec 17 17:07:45 CST 2025","Wed Dec 17 17:07:45 CST 2025","668","HAT.core","TestRunner","TestRunner","","","购物车用例标题",""
+Index: allure-report/data/suites.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\"uid\":\"98d3104e051c652961429bf95fa0b5d6\",\"name\":\"suites\",\"children\":[{\"name\":\"HAT.core\",\"children\":[{\"name\":\"TestRunner\",\"children\":[{\"name\":\"TestRunner\",\"children\":[{\"name\":\"登录用例标题\",\"uid\":\"5e36f5daab846a86\",\"parentUid\":\"2db32f78fe84d9e9d139df1148bfcdbc\",\"status\":\"passed\",\"time\":{\"start\":1765715654338,\"stop\":1765715654873,\"duration\":535},\"flaky\":false,\"newFailed\":false,\"newPassed\":false,\"newBroken\":false,\"retriesCount\":0,\"retriesStatusChange\":false,\"parameters\":[\"''\"],\"tags\":[]}],\"uid\":\"2db32f78fe84d9e9d139df1148bfcdbc\"}],\"uid\":\"86885bbc367980c89add99d01eda23a9\"}],\"uid\":\"6ba8b2b0c2a613f1452d6eddd6594146\"}]}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/data/suites.json b/allure-report/data/suites.json
+--- a/allure-report/data/suites.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/data/suites.json	(date 1765962468542)
+@@ -1,1 +1,1 @@
+-{"uid":"98d3104e051c652961429bf95fa0b5d6","name":"suites","children":[{"name":"HAT.core","children":[{"name":"TestRunner","children":[{"name":"TestRunner","children":[{"name":"登录用例标题","uid":"5e36f5daab846a86","parentUid":"2db32f78fe84d9e9d139df1148bfcdbc","status":"passed","time":{"start":1765715654338,"stop":1765715654873,"duration":535},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"2db32f78fe84d9e9d139df1148bfcdbc"}],"uid":"86885bbc367980c89add99d01eda23a9"}],"uid":"6ba8b2b0c2a613f1452d6eddd6594146"}]}
+\ No newline at end of file
++{"uid":"98d3104e051c652961429bf95fa0b5d6","name":"suites","children":[{"name":"HAT.core","children":[{"name":"TestRunner","children":[{"name":"TestRunner","children":[{"name":"登录用例标题","uid":"bf4874b085278c51","parentUid":"2db32f78fe84d9e9d139df1148bfcdbc","status":"passed","time":{"start":1765962464791,"stop":1765962465309,"duration":518},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"购物车用例标题","uid":"c8267926e0e7907","parentUid":"2db32f78fe84d9e9d139df1148bfcdbc","status":"passed","time":{"start":1765962465313,"stop":1765962465981,"duration":668},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"购物车用例标题","uid":"c523dc2eb118aa37","parentUid":"2db32f78fe84d9e9d139df1148bfcdbc","status":"passed","time":{"start":1765962465984,"stop":1765962466536,"duration":552},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"地址用例标题","uid":"2ca90ee71b422b6e","parentUid":"2db32f78fe84d9e9d139df1148bfcdbc","status":"passed","time":{"start":1765962466539,"stop":1765962467022,"duration":483},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"订单用例标题","uid":"754ed191398f7708","parentUid":"2db32f78fe84d9e9d139df1148bfcdbc","status":"passed","time":{"start":1765962467025,"stop":1765962467584,"duration":559},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"2db32f78fe84d9e9d139df1148bfcdbc"}],"uid":"86885bbc367980c89add99d01eda23a9"}],"uid":"6ba8b2b0c2a613f1452d6eddd6594146"}]}
+\ No newline at end of file
+Index: examples/api-cases-yaml/1_login.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>基础配置:  #后续测试报告中显示\r\n  用例类型: ApiCase\r\n  用例标题: 登录用例标题\r\n  一级模块: 登录模块\r\n  二级模块: 登录功能\r\n\r\n前置脚本: \"\"\r\n#  - \"context.update({'username':'test_user_001'})\"\r\n\r\n后置脚本: \"\"\r\n#  - \"print('后置脚本')\"\r\n\r\n用例步骤:\r\n- 发送登录接口:\r\n    操作类型: 发送请求POST\r\n    请求地址: \"{{URL}}\"\r\n    URL参数:\r\n      s: /api/user/login\r\n      application: app\r\n      application_client_type: weixin\r\n    请求数据:\r\n      accounts: \"test_user_001\"\r\n      pwd: \"Test@123456\"\r\n      type: \"username\"\r\n\r\n- 提取响应数据token:\r\n    操作类型: 提取数据JSON\r\n    表达式: $..token\r\n    变量名: msg_token\r\n\r\n- 提取响应数据msg:\r\n    操作类型: 提取数据JSON\r\n    表达式: $..msg\r\n    变量名: sj_msg
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/examples/api-cases-yaml/1_login.yaml b/examples/api-cases-yaml/1_login.yaml
+--- a/examples/api-cases-yaml/1_login.yaml	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/examples/api-cases-yaml/1_login.yaml	(date 1765870834643)
+@@ -31,4 +31,5 @@
+ - 提取响应数据msg:
+     操作类型: 提取数据JSON
+     表达式: $..msg
+-    变量名: sj_msg
+\ No newline at end of file
++    变量名: sj_msg
++
+Index: allure-report/data/timeline.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\"uid\":\"ab17fc5a4eb3bca4b216b548c7f9fcbc\",\"name\":\"timeline\",\"children\":[{\"name\":\"DESKTOP-VUHS4PA\",\"children\":[{\"name\":\"26508-MainThread\",\"children\":[{\"name\":\"登录用例标题\",\"uid\":\"5e36f5daab846a86\",\"parentUid\":\"e24d601f08f8f4f742c0e18c3de818b9\",\"status\":\"passed\",\"time\":{\"start\":1765715654338,\"stop\":1765715654873,\"duration\":535},\"flaky\":false,\"newFailed\":false,\"newPassed\":false,\"newBroken\":false,\"retriesCount\":0,\"retriesStatusChange\":false,\"parameters\":[\"''\"],\"tags\":[]}],\"uid\":\"e24d601f08f8f4f742c0e18c3de818b9\"}],\"uid\":\"64275ab4fb4e4e1ff088f3434197ce03\"}]}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/data/timeline.json b/allure-report/data/timeline.json
+--- a/allure-report/data/timeline.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/data/timeline.json	(date 1765962468541)
+@@ -1,1 +1,1 @@
+-{"uid":"ab17fc5a4eb3bca4b216b548c7f9fcbc","name":"timeline","children":[{"name":"DESKTOP-VUHS4PA","children":[{"name":"26508-MainThread","children":[{"name":"登录用例标题","uid":"5e36f5daab846a86","parentUid":"e24d601f08f8f4f742c0e18c3de818b9","status":"passed","time":{"start":1765715654338,"stop":1765715654873,"duration":535},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"e24d601f08f8f4f742c0e18c3de818b9"}],"uid":"64275ab4fb4e4e1ff088f3434197ce03"}]}
+\ No newline at end of file
++{"uid":"ab17fc5a4eb3bca4b216b548c7f9fcbc","name":"timeline","children":[{"name":"DESKTOP-VUHS4PA","children":[{"name":"17816-MainThread","children":[{"name":"购物车用例标题","uid":"c8267926e0e7907","parentUid":"32df5b81abd724fd8c648285c69b6f5d","status":"passed","time":{"start":1765962465313,"stop":1765962465981,"duration":668},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"地址用例标题","uid":"2ca90ee71b422b6e","parentUid":"32df5b81abd724fd8c648285c69b6f5d","status":"passed","time":{"start":1765962466539,"stop":1765962467022,"duration":483},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"购物车用例标题","uid":"c523dc2eb118aa37","parentUid":"32df5b81abd724fd8c648285c69b6f5d","status":"passed","time":{"start":1765962465984,"stop":1765962466536,"duration":552},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"订单用例标题","uid":"754ed191398f7708","parentUid":"32df5b81abd724fd8c648285c69b6f5d","status":"passed","time":{"start":1765962467025,"stop":1765962467584,"duration":559},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]},{"name":"登录用例标题","uid":"bf4874b085278c51","parentUid":"32df5b81abd724fd8c648285c69b6f5d","status":"passed","time":{"start":1765962464791,"stop":1765962465309,"duration":518},"flaky":false,"newFailed":false,"newPassed":false,"newBroken":false,"retriesCount":0,"retriesStatusChange":false,"parameters":["''"],"tags":[]}],"uid":"32df5b81abd724fd8c648285c69b6f5d"}],"uid":"64275ab4fb4e4e1ff088f3434197ce03"}]}
+\ No newline at end of file
+Index: examples/api-cases-yaml/2_addcard.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>基础配置:  #后续测试报告中显示\r\n  用例类型: ApiCase\r\n  用例标题: 购物车用例标题\r\n  一级模块: 购物车模块\r\n  二级模块: 购物车功能\r\n\r\n前置脚本: \"\"\r\n后置脚本: \"\"\r\n\r\n用例步骤:\r\n  - 发送购物车接口:\r\n      操作类型: 发送请求POST\r\n      请求地址: \"{{URL}}\"\r\n      URL参数:\r\n        s: api/cart/save\r\n        application: app\r\n        application_client_type: weixin\r\n        token: \"{{msg_token}}\"\r\n      请求数据:\r\n        goods_id: 2,\r\n        stock: 1,\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/examples/api-cases-yaml/2_addcard.yaml b/examples/api-cases-yaml/2_addcard.yaml
+--- a/examples/api-cases-yaml/2_addcard.yaml	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/examples/api-cases-yaml/2_addcard.yaml	(date 1765872456717)
+@@ -2,7 +2,7 @@
+   用例类型: ApiCase
+   用例标题: 购物车用例标题
+   一级模块: 购物车模块
+-  二级模块: 购物车功能
++  二级模块: 加入购物车功能
+ 
+ 前置脚本: ""
+ 后置脚本: ""
+Index: allure-report/export/influxDbData.txt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>launch_status failed=0 1765715655000000000\r\nlaunch_status broken=0 1765715655000000000\r\nlaunch_status passed=1 1765715655000000000\r\nlaunch_status skipped=0 1765715655000000000\r\nlaunch_status unknown=0 1765715655000000000\r\nlaunch_time duration=535 1765715655000000000\r\nlaunch_time min_duration=535 1765715655000000000\r\nlaunch_time max_duration=535 1765715655000000000\r\nlaunch_time sum_duration=535 1765715655000000000\r\nlaunch_retries retries=0 1765715655000000000\r\nlaunch_retries run=1 1765715655000000000\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/export/influxDbData.txt b/allure-report/export/influxDbData.txt
+--- a/allure-report/export/influxDbData.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/export/influxDbData.txt	(date 1765962468629)
+@@ -1,11 +1,11 @@
+-launch_status failed=0 1765715655000000000
+-launch_status broken=0 1765715655000000000
+-launch_status passed=1 1765715655000000000
+-launch_status skipped=0 1765715655000000000
+-launch_status unknown=0 1765715655000000000
+-launch_time duration=535 1765715655000000000
+-launch_time min_duration=535 1765715655000000000
+-launch_time max_duration=535 1765715655000000000
+-launch_time sum_duration=535 1765715655000000000
+-launch_retries retries=0 1765715655000000000
+-launch_retries run=1 1765715655000000000
++launch_status failed=0 1765962468000000000
++launch_status broken=0 1765962468000000000
++launch_status passed=5 1765962468000000000
++launch_status skipped=0 1765962468000000000
++launch_status unknown=0 1765962468000000000
++launch_time duration=2793 1765962468000000000
++launch_time min_duration=483 1765962468000000000
++launch_time max_duration=668 1765962468000000000
++launch_time sum_duration=2780 1765962468000000000
++launch_retries retries=0 1765962468000000000
++launch_retries run=5 1765962468000000000
+Index: allure-report/export/prometheusData.txt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>launch_status_failed 0\r\nlaunch_status_broken 0\r\nlaunch_status_passed 1\r\nlaunch_status_skipped 0\r\nlaunch_status_unknown 0\r\nlaunch_time_duration 535\r\nlaunch_time_min_duration 535\r\nlaunch_time_max_duration 535\r\nlaunch_time_sum_duration 535\r\nlaunch_retries_retries 0\r\nlaunch_retries_run 1\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/export/prometheusData.txt b/allure-report/export/prometheusData.txt
+--- a/allure-report/export/prometheusData.txt	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/export/prometheusData.txt	(date 1765962468631)
+@@ -1,11 +1,11 @@
+ launch_status_failed 0
+ launch_status_broken 0
+-launch_status_passed 1
++launch_status_passed 5
+ launch_status_skipped 0
+ launch_status_unknown 0
+-launch_time_duration 535
+-launch_time_min_duration 535
+-launch_time_max_duration 535
+-launch_time_sum_duration 535
++launch_time_duration 2793
++launch_time_min_duration 483
++launch_time_max_duration 668
++launch_time_sum_duration 2780
+ launch_retries_retries 0
+-launch_retries_run 1
++launch_retries_run 5
+Index: allure-report/history/duration-trend.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[{\"data\":{\"duration\":535}}]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/history/duration-trend.json b/allure-report/history/duration-trend.json
+--- a/allure-report/history/duration-trend.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/history/duration-trend.json	(date 1765962468535)
+@@ -1,1 +1,1 @@
+-[{"data":{"duration":535}}]
+\ No newline at end of file
++[{"data":{"duration":2793}}]
+\ No newline at end of file
+Index: examples/api-cases-yaml/3_viewcart.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/examples/api-cases-yaml/3_viewcart.yaml b/examples/api-cases-yaml/3_viewcart.yaml
+new file mode 100644
+--- /dev/null	(date 1765875037523)
++++ b/examples/api-cases-yaml/3_viewcart.yaml	(date 1765875037523)
+@@ -0,0 +1,34 @@
++基础配置:  #后续测试报告中显示
++  用例类型: ApiCase
++  用例标题: 购物车用例标题
++  一级模块: 购物车模块
++  二级模块: 查看购物车功能
++
++前置脚本: ""
++
++后置脚本: ""
++
++用例步骤:
++- 发送登录接口:
++    操作类型: 发送请求GET
++    请求地址: "{{URL}}"
++    URL参数:
++      s: api/cart/index
++      application: app
++      application_client_type: weixin
++      token: "{{msg_token}}"
++
++    请求数据: ""
++
++
++- 提取响应数据data:
++    操作类型: 提取数据JSON
++    表达式: $.data.data[0].id
++    变量名: isd_id
++##
++#- 提取响应数据地址id:
++#    操作类型: 提取数据JSON
++#    表达式: $.data.data[0].id
++#    变量名: isd_id
++
++
+Index: allure-report/history/history-trend.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[{\"data\":{\"failed\":0,\"broken\":0,\"skipped\":0,\"passed\":1,\"unknown\":0,\"total\":1}}]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/history/history-trend.json b/allure-report/history/history-trend.json
+--- a/allure-report/history/history-trend.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/history/history-trend.json	(date 1765962468488)
+@@ -1,1 +1,1 @@
+-[{"data":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1}}]
+\ No newline at end of file
++[{"data":{"failed":0,"broken":0,"skipped":0,"passed":5,"unknown":0,"total":5}}]
+\ No newline at end of file
+Index: allure-report/history/history.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\"70a04644797f5954429c697065a36448\":{\"statistic\":{\"failed\":0,\"broken\":0,\"skipped\":0,\"passed\":1,\"unknown\":0,\"total\":1},\"items\":[{\"uid\":\"5e36f5daab846a86\",\"status\":\"passed\",\"time\":{\"start\":1765715654338,\"stop\":1765715654873,\"duration\":535}}]}}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/history/history.json b/allure-report/history/history.json
+--- a/allure-report/history/history.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/history/history.json	(date 1765962468484)
+@@ -1,1 +1,1 @@
+-{"70a04644797f5954429c697065a36448":{"statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1},"items":[{"uid":"5e36f5daab846a86","status":"passed","time":{"start":1765715654338,"stop":1765715654873,"duration":535}}]}}
+\ No newline at end of file
++{"eefca22324383afb792851957efee96a":{"statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1},"items":[{"uid":"c8267926e0e7907","status":"passed","time":{"start":1765962465313,"stop":1765962465981,"duration":668}}]},"3f0075ebfdef3eb7317de4f90f858285":{"statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1},"items":[{"uid":"754ed191398f7708","status":"passed","time":{"start":1765962467025,"stop":1765962467584,"duration":559}}]},"c0ef28ceb33dc85f2c8f222b5c5114aa":{"statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1},"items":[{"uid":"c523dc2eb118aa37","status":"passed","time":{"start":1765962465984,"stop":1765962466536,"duration":552}}]},"2818db6f84a75b412e9b5e2a2ba30e69":{"statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1},"items":[{"uid":"2ca90ee71b422b6e","status":"passed","time":{"start":1765962466539,"stop":1765962467022,"duration":483}}]},"08959e845036c7af9e93cd5455c53be2":{"statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1},"items":[{"uid":"bf4874b085278c51","status":"passed","time":{"start":1765962464791,"stop":1765962465309,"duration":518}}]}}
+\ No newline at end of file
+Index: allure-report/history/retry-trend.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[{\"data\":{\"run\":1,\"retry\":0}}]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/history/retry-trend.json b/allure-report/history/retry-trend.json
+--- a/allure-report/history/retry-trend.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/history/retry-trend.json	(date 1765962468471)
+@@ -1,1 +1,1 @@
+-[{"data":{"run":1,"retry":0}}]
+\ No newline at end of file
++[{"data":{"run":5,"retry":0}}]
+\ No newline at end of file
+Index: allure-report/widgets/duration-trend.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[{\"data\":{\"duration\":535}}]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/widgets/duration-trend.json b/allure-report/widgets/duration-trend.json
+--- a/allure-report/widgets/duration-trend.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/widgets/duration-trend.json	(date 1765962468535)
+@@ -1,1 +1,1 @@
+-[{"data":{"duration":535}}]
+\ No newline at end of file
++[{"data":{"duration":2793}}]
+\ No newline at end of file
+Index: allure-report/widgets/duration.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[{\"uid\":\"5e36f5daab846a86\",\"name\":\"登录用例标题\",\"time\":{\"start\":1765715654338,\"stop\":1765715654873,\"duration\":535},\"status\":\"passed\",\"severity\":\"normal\"}]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/widgets/duration.json b/allure-report/widgets/duration.json
+--- a/allure-report/widgets/duration.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/widgets/duration.json	(date 1765962468532)
+@@ -1,1 +1,1 @@
+-[{"uid":"5e36f5daab846a86","name":"登录用例标题","time":{"start":1765715654338,"stop":1765715654873,"duration":535},"status":"passed","severity":"normal"}]
+\ No newline at end of file
++[{"uid":"754ed191398f7708","name":"订单用例标题","time":{"start":1765962467025,"stop":1765962467584,"duration":559},"status":"passed","severity":"normal"},{"uid":"2ca90ee71b422b6e","name":"地址用例标题","time":{"start":1765962466539,"stop":1765962467022,"duration":483},"status":"passed","severity":"normal"},{"uid":"c523dc2eb118aa37","name":"购物车用例标题","time":{"start":1765962465984,"stop":1765962466536,"duration":552},"status":"passed","severity":"normal"},{"uid":"bf4874b085278c51","name":"登录用例标题","time":{"start":1765962464791,"stop":1765962465309,"duration":518},"status":"passed","severity":"normal"},{"uid":"c8267926e0e7907","name":"购物车用例标题","time":{"start":1765962465313,"stop":1765962465981,"duration":668},"status":"passed","severity":"normal"}]
+\ No newline at end of file
+Index: allure-report/widgets/history-trend.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[{\"data\":{\"failed\":0,\"broken\":0,\"skipped\":0,\"passed\":1,\"unknown\":0,\"total\":1}}]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/widgets/history-trend.json b/allure-report/widgets/history-trend.json
+--- a/allure-report/widgets/history-trend.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/widgets/history-trend.json	(date 1765962468489)
+@@ -1,1 +1,1 @@
+-[{"data":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1}}]
+\ No newline at end of file
++[{"data":{"failed":0,"broken":0,"skipped":0,"passed":5,"unknown":0,"total":5}}]
+\ No newline at end of file
+Index: allure-report/widgets/retry-trend.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[{\"data\":{\"run\":1,\"retry\":0}}]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/widgets/retry-trend.json b/allure-report/widgets/retry-trend.json
+--- a/allure-report/widgets/retry-trend.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/widgets/retry-trend.json	(date 1765962468472)
+@@ -1,1 +1,1 @@
+-[{"data":{"run":1,"retry":0}}]
+\ No newline at end of file
++[{"data":{"run":5,"retry":0}}]
+\ No newline at end of file
+Index: allure-report/widgets/severity.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[{\"uid\":\"5e36f5daab846a86\",\"name\":\"登录用例标题\",\"time\":{\"start\":1765715654338,\"stop\":1765715654873,\"duration\":535},\"status\":\"passed\",\"severity\":\"normal\"}]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/widgets/severity.json b/allure-report/widgets/severity.json
+--- a/allure-report/widgets/severity.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/widgets/severity.json	(date 1765962468478)
+@@ -1,1 +1,1 @@
+-[{"uid":"5e36f5daab846a86","name":"登录用例标题","time":{"start":1765715654338,"stop":1765715654873,"duration":535},"status":"passed","severity":"normal"}]
+\ No newline at end of file
++[{"uid":"c8267926e0e7907","name":"购物车用例标题","time":{"start":1765962465313,"stop":1765962465981,"duration":668},"status":"passed","severity":"normal"},{"uid":"bf4874b085278c51","name":"登录用例标题","time":{"start":1765962464791,"stop":1765962465309,"duration":518},"status":"passed","severity":"normal"},{"uid":"2ca90ee71b422b6e","name":"地址用例标题","time":{"start":1765962466539,"stop":1765962467022,"duration":483},"status":"passed","severity":"normal"},{"uid":"c523dc2eb118aa37","name":"购物车用例标题","time":{"start":1765962465984,"stop":1765962466536,"duration":552},"status":"passed","severity":"normal"},{"uid":"754ed191398f7708","name":"订单用例标题","time":{"start":1765962467025,"stop":1765962467584,"duration":559},"status":"passed","severity":"normal"}]
+\ No newline at end of file
+Index: allure-report/widgets/status-chart.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[{\"uid\":\"5e36f5daab846a86\",\"name\":\"登录用例标题\",\"time\":{\"start\":1765715654338,\"stop\":1765715654873,\"duration\":535},\"status\":\"passed\",\"severity\":\"normal\"}]
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/widgets/status-chart.json b/allure-report/widgets/status-chart.json
+--- a/allure-report/widgets/status-chart.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/widgets/status-chart.json	(date 1765962468537)
+@@ -1,1 +1,1 @@
+-[{"uid":"5e36f5daab846a86","name":"登录用例标题","time":{"start":1765715654338,"stop":1765715654873,"duration":535},"status":"passed","severity":"normal"}]
+\ No newline at end of file
++[{"uid":"754ed191398f7708","name":"订单用例标题","time":{"start":1765962467025,"stop":1765962467584,"duration":559},"status":"passed","severity":"normal"},{"uid":"2ca90ee71b422b6e","name":"地址用例标题","time":{"start":1765962466539,"stop":1765962467022,"duration":483},"status":"passed","severity":"normal"},{"uid":"c523dc2eb118aa37","name":"购物车用例标题","time":{"start":1765962465984,"stop":1765962466536,"duration":552},"status":"passed","severity":"normal"},{"uid":"bf4874b085278c51","name":"登录用例标题","time":{"start":1765962464791,"stop":1765962465309,"duration":518},"status":"passed","severity":"normal"},{"uid":"c8267926e0e7907","name":"购物车用例标题","time":{"start":1765962465313,"stop":1765962465981,"duration":668},"status":"passed","severity":"normal"}]
+\ No newline at end of file
+Index: allure-report/widgets/suites.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\"total\":1,\"items\":[{\"uid\":\"6ba8b2b0c2a613f1452d6eddd6594146\",\"name\":\"HAT.core\",\"statistic\":{\"failed\":0,\"broken\":0,\"skipped\":0,\"passed\":1,\"unknown\":0,\"total\":1}}]}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/widgets/suites.json b/allure-report/widgets/suites.json
+--- a/allure-report/widgets/suites.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/widgets/suites.json	(date 1765962468587)
+@@ -1,1 +1,1 @@
+-{"total":1,"items":[{"uid":"6ba8b2b0c2a613f1452d6eddd6594146","name":"HAT.core","statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1}}]}
+\ No newline at end of file
++{"total":1,"items":[{"uid":"6ba8b2b0c2a613f1452d6eddd6594146","name":"HAT.core","statistic":{"failed":0,"broken":0,"skipped":0,"passed":5,"unknown":0,"total":5}}]}
+\ No newline at end of file
+Index: allure-report/widgets/summary.json
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>{\"reportName\":\"Allure Report\",\"testRuns\":[],\"statistic\":{\"failed\":0,\"broken\":0,\"skipped\":0,\"passed\":1,\"unknown\":0,\"total\":1},\"time\":{\"start\":1765715654338,\"stop\":1765715654873,\"duration\":535,\"minDuration\":535,\"maxDuration\":535,\"sumDuration\":535}}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/widgets/summary.json b/allure-report/widgets/summary.json
+--- a/allure-report/widgets/summary.json	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/widgets/summary.json	(date 1765962468633)
+@@ -1,1 +1,1 @@
+-{"reportName":"Allure Report","testRuns":[],"statistic":{"failed":0,"broken":0,"skipped":0,"passed":1,"unknown":0,"total":1},"time":{"start":1765715654338,"stop":1765715654873,"duration":535,"minDuration":535,"maxDuration":535,"sumDuration":535}}
+\ No newline at end of file
++{"reportName":"Allure Report","testRuns":[],"statistic":{"failed":0,"broken":0,"skipped":0,"passed":5,"unknown":0,"total":5},"time":{"start":1765962464791,"stop":1765962467584,"duration":2793,"minDuration":483,"maxDuration":668,"sumDuration":2780}}
+\ No newline at end of file
+Index: examples/api-cases-yaml/4_Viewtheaddress.yaml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/examples/api-cases-yaml/4_Viewtheaddress.yaml b/examples/api-cases-yaml/4_Viewtheaddress.yaml
+new file mode 100644
+--- /dev/null	(date 1765899286375)
++++ b/examples/api-cases-yaml/4_Viewtheaddress.yaml	(date 1765899286375)
+@@ -0,0 +1,27 @@
++基础配置:  #后续测试报告中显示
++  用例类型: ApiCase
++  用例标题: 地址用例标题
++  一级模块: 地址模块
++  二级模块: 查看地址功能
++
++前置脚本: ""
++
++后置脚本: ""
++
++用例步骤:
++- 发送登录接口:
++    操作类型: 发送请求POST
++    请求地址: "{{URL}}"
++    URL参数:
++      s: api/useraddress/index
++      application: app
++      application_client_type: weixin
++      token: "{{msg_token}}"
++
++    请求数据: ""
++
++
++- 提取响应数据data:
++    操作类型: 提取数据JSON
++    表达式: $.data.data[0].id
++    变量名: dzid
+\ No newline at end of file
+Index: allure-report/index.html
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><!DOCTYPE html>\r\n<html dir=\"ltr\" lang=\"en\">\r\n<head>\r\n    <meta charset=\"utf-8\">\r\n    <title>Allure Report</title>\r\n    <link rel=\"icon\" href=\"favicon.ico\">\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"styles.css\">\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"plugin/screen-diff/styles.css\">\r\n</head>\r\n<body>\r\n    <div id=\"alert\"></div>\r\n    <div id=\"content\">\r\n        <span class=\"spinner\">\r\n            <span class=\"spinner__circle\"></span>\r\n        </span>\r\n    </div>\r\n    <div id=\"popup\"></div>\r\n    <script src=\"app.js\"></script>\r\n    <script src=\"plugin/behaviors/index.js\"></script>\r\n    <script src=\"plugin/packages/index.js\"></script>\r\n    <script src=\"plugin/screen-diff/index.js\"></script>\r\n    <script async src=\"https://www.googletagmanager.com/gtag/js?id=G-FVWC4GKEYS\"></script>\r\n    <script>\r\n        window.dataLayer = window.dataLayer || [];\r\n        function gtag(){dataLayer.push(arguments);}\r\n        gtag('js', new Date());\r\n        gtag('config', 'G-FVWC4GKEYS', {\r\n          'allureVersion': 'dev',\r\n          'reportUuid': '26bc386a-3d79-47fc-8a28-5e45d2247063',\r\n          'single_file': false\r\n        });\r\n    </script>\r\n</body>\r\n</html>\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/allure-report/index.html b/allure-report/index.html
+--- a/allure-report/index.html	(revision 4d15150b9f0471e0032d5723d676212e009ee10c)
++++ b/allure-report/index.html	(date 1765962469216)
+@@ -26,7 +26,7 @@
+         gtag('js', new Date());
+         gtag('config', 'G-FVWC4GKEYS', {
+           'allureVersion': 'dev',
+-          'reportUuid': '26bc386a-3d79-47fc-8a28-5e45d2247063',
++          'reportUuid': '74eb130c-1e36-40fb-8ab7-cc0ef72d90fd',
+           'single_file': false
+         });
+     </script>

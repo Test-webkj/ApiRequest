@@ -1,2 +1,5 @@
 "Status","Start Time","Stop Time","Duration in ms","Parent Suite","Suite","Sub Suite","Test Class","Test Method","Name","Description"
-"passed","Sun Dec 14 20:34:14 CST 2025","Sun Dec 14 20:34:14 CST 2025","535","HAT.core","TestRunner","TestRunner","","","登录用例标题",""
+"passed","Mon Dec 22 16:52:49 CST 2025","Mon Dec 22 16:52:49 CST 2025","592","HAT.core","TestRunner","TestRunner","","","登录用例标题",""
+"passed","Mon Dec 22 16:52:49 CST 2025","Mon Dec 22 16:52:50 CST 2025","432","HAT.core","TestRunner","TestRunner","","","登录用例标题",""
+"passed","Mon Dec 22 16:52:50 CST 2025","Mon Dec 22 16:52:51 CST 2025","962","HAT.core","TestRunner","TestRunner","","","登录用例标题",""
+"passed","Mon Dec 22 16:52:48 CST 2025","Mon Dec 22 16:52:49 CST 2025","626","HAT.core","TestRunner","TestRunner","","","登录用例标题",""

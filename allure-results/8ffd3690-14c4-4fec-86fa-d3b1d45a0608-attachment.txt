@@ -1,7 +1,0 @@
-数据类型 <class 'dict'>
-操作类型 发送请求POST
-登陆响应数据 {'msg': '登录成功', 'code': 0, 'data': {'id': '12086', 'username': 'test_user_001', 'nickname': '', 'mobile': '', 'email': '', 'avatar': 'http://shop-xo.hctestedu.com/static/index/default/images/default-user-avatar.jpg', 'alipay_openid': '', 'weixin_openid': '', 'weixin_unionid': '', 'weixin_web_openid': '', 'baidu_openid': '', 'toutiao_openid': '', 'qq_openid': '', 'qq_unionid': '', 'integral': '0', 'locking_integral': '0', 'referrer': '0', 'add_time': '1763708668', 'add_time_text': '2025-11-21 15:04:28', 'mobile_security': '', 'email_security': '', 'user_name_view': 'test_user_001', 'is_mandatory_bind_mobile': 0, 'token': '0ce9254ef9726dd660c8720c4cf617e9'}}
-操作类型 提取数据JSON
-全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'msg_token': '0ce9254ef9726dd660c8720c4cf617e9'}
-操作类型 提取数据JSON
-全局变量 {'URL': 'http://shop-xo.hctestedu.com', '响应结果': <Response [200]>, 'msg_token': '0ce9254ef9726dd660c8720c4cf617e9', 'sj_msg': '登录成功'}

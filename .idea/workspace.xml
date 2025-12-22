@@ -4,7 +4,61 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5bb02aa6-dc14-43f1-ad8a-89f49de3fac4" name="更改" comment="测试" />
+    <list default="true" id="5bb02aa6-dc14-43f1-ad8a-89f49de3fac4" name="更改" comment="测试">
+      <change afterPath="$PROJECT_DIR$/examples/api-cases-yaml/3viewcart.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/examples/api-cases-yaml/4Viewtheaddress.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/examples/api-cases-yaml/5Neworderplaced.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/1.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/HAT/core/TestRunner.py" beforeDir="false" afterPath="$PROJECT_DIR$/HAT/core/TestRunner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/HAT/keywords/api_keywords.py" beforeDir="false" afterPath="$PROJECT_DIR$/HAT/keywords/api_keywords.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/HAT/parse/YamlCaseParser.py" beforeDir="false" afterPath="$PROJECT_DIR$/HAT/parse/YamlCaseParser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/2386101d45247021.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/51af9bc94b98b07e.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/7c9e1e81027f9026.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/80b121384af97a10.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/eca041c50f7d5b9.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/attachments/ed75f87ad26a1803.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/behaviors.csv" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/behaviors.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/behaviors.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/behaviors.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/packages.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/packages.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/suites.csv" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/suites.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/suites.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/suites.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/test-cases/1a7c34fc8432faa7.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/test-cases/1aaa2686e5a25035.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/test-cases/5e36f5daab846a86.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/data/timeline.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/data/timeline.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/export/influxDbData.txt" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/export/influxDbData.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/export/prometheusData.txt" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/export/prometheusData.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/history/duration-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/history/duration-trend.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/history/history-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/history/history-trend.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/history/history.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/history/history.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/history/retry-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/history/retry-trend.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/widgets/duration-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/duration-trend.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/widgets/duration.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/duration.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/widgets/history-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/history-trend.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/widgets/retry-trend.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/retry-trend.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/widgets/severity.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/severity.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/widgets/status-chart.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/status-chart.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/widgets/suites.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/suites.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-report/widgets/summary.json" beforeDir="false" afterPath="$PROJECT_DIR$/allure-report/widgets/summary.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/143b3e1a-0ab2-4a27-9d5b-eb7e5185c1bc-attachment.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/39abd726-fe92-43e1-954d-1dbda80810a2-container.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/57e8e340-1a5b-4358-8195-b9b4a0cde4ba-result.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/5d090668-e43a-4abf-a8c9-7313163f4576-attachment.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/61d1972d-2eca-4a9e-a36e-7f319f8cec6a-container.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/7eeb7955-2506-43bc-bd58-445466c36814-container.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/89f82845-4b17-414c-94a4-6d776d2ef0e5-attachment.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/8ecbe0cb-0802-47af-9c71-c246c778e71f-attachment.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/8ffd3690-14c4-4fec-86fa-d3b1d45a0608-attachment.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/ad050fd7-abd4-48c0-bb51-9be3040f75af-result.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/f3f77c50-608d-4ee5-a440-f50bc5ce4695-result.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/allure-results/f6d0a064-4ded-4ce6-87f0-416b8e81358e-attachment.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/api-cases-yaml/1_login.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/examples/api-cases-yaml/1_login.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/examples/api-cases-yaml/2_addcard.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/examples/api-cases-yaml/2addcard.yaml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -23,6 +77,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;Cyw991004&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Test-webkj/ApiRequest.git&quot;,
+    &quot;accountId&quot;: &quot;9cbd967e-8154-45bf-a210-27a203640151&quot;
+  }
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 3
 }</component>
@@ -34,24 +100,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.1.executor&quot;: &quot;Run&quot;,
-    &quot;Python.VarRender.executor&quot;: &quot;Run&quot;,
-    &quot;Python.YamlCaseParser.executor&quot;: &quot;Run&quot;,
-    &quot;Python.api参数.executor&quot;: &quot;Run&quot;,
-    &quot;Python.login.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main (1).executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;last_opened_file_path&quot;: &quot;F:/request&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.1.executor": "Run",
+    "Python.VarRender.executor": "Run",
+    "Python.YamlCaseParser.executor": "Run",
+    "Python.api参数.executor": "Run",
+    "Python.login.executor": "Run",
+    "Python.main (1).executor": "Run",
+    "Python.main.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "F:/request",
+    "settings.editor.selected.configurable": "preferences.keymap"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="F:\request\HAT\examples" />
@@ -128,7 +194,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="main (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="login" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="request" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -137,11 +203,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/day09(5)(1)/day09" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/shopapi" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/day09(5)(1)/day09/main.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/shopapi/login.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -176,9 +242,9 @@
       <list>
         <item itemvalue="Python.main" />
         <item itemvalue="Python.YamlCaseParser" />
+        <item itemvalue="Python.login" />
         <item itemvalue="Python.1" />
         <item itemvalue="Python.VarRender" />
-        <item itemvalue="Python.main (1)" />
       </list>
     </recent_temporary>
   </component>
@@ -197,6 +263,15 @@
       <option name="presentableId" value="Default" />
       <updated>1764235226018</updated>
     </task>
+    <task id="LOCAL-00001" summary="测试">
+      <option name="closed" value="true" />
+      <created>1765816010427</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1765816010427</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -209,5 +284,12 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <ignored-roots>
+      <path value="$PROJECT_DIR$/HAT" />
+    </ignored-roots>
+    <MESSAGE value="测试" />
+    <option name="LAST_COMMIT_MESSAGE" value="测试" />
   </component>
 </project>

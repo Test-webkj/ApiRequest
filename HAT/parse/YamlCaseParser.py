@@ -1,4 +1,8 @@
+import copy
 import os.path
+import uuid
+from uuid import uuid4
+
 import yaml
 from HAT.core.globalContext import g_context
 
@@ -46,6 +50,39 @@ def load_yaml_files(file_path):
     return yaml_caseInfos
 
 
+# 解析yaml文件中的ddt数据驱动，有几个ddt就分解成几条用例
+def yaml_case_parser(file_path):
+    case_infos=[]
+    case_names=[]
+    # 符合规则的yaml文件数据都读取出来
+    yaml_caseInfos=load_yaml_files(file_path)
+    # print("符合规则的yaml数据",yaml_caseInfos)
+
+    for caseinfo in yaml_caseInfos:
+        # print("用例数据",caseinfo)
+        # 拿到文件中的数据驱动数据
+        ddts=caseinfo.get("数据驱动",[])
+
+        # 如果用例中有ddts数据驱动  模板  拿到数据驱动数据
+        # 如果用例中没有ddts数据驱动  正常的把用例数据放在列表中，用例名称放在列表中
+        if len(ddts)==0:
+            case_name=caseinfo.get("基础配置").get("用例标题",uuid.uuid4().__str__())
+            case_names.append(case_name)#用例名称放在列表中
+            case_infos.append(caseinfo)#用例数据放在列表中  购物车的用例正常的放名称和用例数据
+        else:
+            caseinfo.pop("数据驱动")#只剩下用例模板
+            for ddt in ddts:
+                new_case=copy.deepcopy(caseinfo)#复制用例模板
+                new_case.update({"local_context":ddt})
+                # print("用例数据", new_case)  登录用例标题-正确用户名和密码  登录用例标题-错误用户名和密码
+                case_name = caseinfo.get("基础配置").get("用例标题", uuid.uuid4().__str__())
+                case_name = f'{case_name}-{ddt.get("描述标题", uuid.uuid4().__str__())}'
+                case_names.append(case_name)#用例名称放在列表中
+                case_infos.append(new_case)#用例数据放在列表中
+    return {
+        "case_infos":case_infos,
+        "case_names":case_names
+    }
 
 if __name__ == '__main__':
     # ./当前目录  ../上一级目录  ../../上上级目录  /n /t  r防止转义
@@ -53,6 +90,9 @@ if __name__ == '__main__':
     # print('返回结果',data)
     #
     # load_context_from_yaml(r'/examples\api-cases-yaml')
-    c = load_yaml_files(r'F:\request\examples\api-cases-yaml')
-    print("符合规则的yaml数据",c)
+    # c = load_yaml_files(r'F:\request\examples\api-cases-yaml')
+    # print("符合规则的yaml数据",c)
+
+    d = yaml_case_parser(r'../../examples/api-cases-yaml')
+    print("用例数据",d)
 

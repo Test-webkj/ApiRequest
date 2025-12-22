@@ -5,37 +5,39 @@ import allure
 import pytest
 import requests
 from tqdm import tqdm
-
 from HAT.extend.script import run_script
 from HAT.core.globalContext import g_context
-from HAT.parse.YamlCaseParser import load_context_from_yaml, readYaml, load_yaml_files
+from HAT.parse.YamlCaseParser import load_context_from_yaml, readYaml, load_yaml_files, yaml_case_parser
 from HAT.keywords.api_keywords import Keywords
 from HAT.utils.VarRender import refresh
-
 
 class TestRunner:
     # 用例数据
     # load_context_from_yaml(r'F:\request\examples\api-cases-yaml') #把地址放在全局变量中去了
     # data=readYaml(r'F:\request\examples\api-cases-yaml\1_login.yaml')
-    data = load_yaml_files(r'./examples/api-cases-yaml/')
+    # data = yaml_case_parser(r'./examples/api-cases-yaml/')
 
-    @pytest.mark.parametrize("caseinfo", data)  # 列表数据
+    all_data = yaml_case_parser(r'./examples/api-cases-yaml/')
+    data = all_data['case_infos']
+
+    @pytest.mark.parametrize("caseinfo", data)  # 一定是一个列表数据
     def test_case_execute(self, caseinfo):
+        # print("用例数据",caseinfo)
         keywords = Keywords(requests)
         base_info = caseinfo.get('基础配置', {})  # 测试报告后续用的
-        print("数据类型",type(base_info))
         allure.dynamic.parameter("caseinfo", "")
         allure.dynamic.feature(base_info.get("一级模块", "默认模块"))
         allure.dynamic.story(base_info.get("二级模块", "默认模块"))
         allure.dynamic.title(base_info.get("用例标题", '默认用例标题'))
 
+        # 还要考虑到一种情况,你准备的测试数据，也可能是从其他地方传过来的，目前没用到
         local_context = caseinfo.get("local_context", {})
         context = copy.deepcopy(g_context().show_dict())
         context.update(local_context)
 
-        #读取前置脚本的数据
+        # 读取前置脚本的数据
         pre_script = refresh(caseinfo.get("前置脚本", None), context)
-        if pre_script:  # 前置脚本不为空  "context.update({'uname':'test_user_001'})"
+        if pre_script:  # 前置脚本不为空  "context.update({'uname':'youer'})"
             for script in eval(pre_script):  # 循环前置脚本的数据
                 # 放在全局变量(script--g_context().show_dict())
                 run_script.exec_script(script, g_context().show_dict())  # 只是把前置脚本的数据放在全局变量中
@@ -49,13 +51,14 @@ class TestRunner:
                 pbar.set_description(f'{base_info.get("用例标题")}-当前步骤:{step_name}')
                 pbar.update(1)
                 with allure.step(step_name):
-                    # print("没有渲染前的字典值数据", step_value)
-                    context = copy.deepcopy(g_context().show_dict())  # 全局变量
-                    step_value = eval(refresh(step_value, context))
-
-                    # print("渲染后的字典值数据", step_value)
+                    print("没有渲染前的字典值数据", step_value)  # accounts: "{{uname}}"
+                    context = copy.deepcopy(g_context().show_dict())  # 拷贝全局变量 全局变量中有uname的值
+                    context.update(local_context)  # ddt数据放在全局变量，给用例中的accounts: "{{uname}}" 进行渲染
+                    print("全局变量", context)
+                    step_value = eval(refresh(step_value, context))  # 从全局变量渲染字典值数据到用例中去  accounts: "youer"
+                    print("渲染后的字典值数据", step_value)
                     key = step_value['操作类型']  # 发送请求POST  发送请求GET
-                    print("操作类型",key)
+                    # print("操作类型",key)
                     try:
                         key_func = keywords.__getattribute__(key)  # 去Keywords关键字类中找对应的方法  反射
 
@@ -67,13 +70,14 @@ class TestRunner:
                         key_func = class_(requests).__getattribute__(key)
                     key_func(**step_value)  # 发送请求POST(接口信息)
 
-
+        # 还要考虑到一种情况,你准备的测试数据，也可能是从其他地方传过来的，目前没用到
         local_context = caseinfo.get("local_context", {})
         context = copy.deepcopy(g_context().show_dict())
         context.update(local_context)
 
-        #读取后置脚本的数据
-        pre_script = refresh(caseinfo.get('后置脚本', None), context)
-        if pre_script:
-            for script in eval(pre_script):
-                run_script.exec_script(script, g_context().show_dict())
+        # 读取前置脚本的数据
+        pre_script = refresh(caseinfo.get("后置脚本", None), context)
+        if pre_script:  # 前置脚本不为空  "context.update({'uname':'youer'})"
+            for script in eval(pre_script):  # 循环前置脚本的数据
+                # 放在全局变量(script--g_context().show_dict())
+                run_script.exec_script(script, g_context().show_dict())  # 只是把前置脚本的数据放在全局变量中
